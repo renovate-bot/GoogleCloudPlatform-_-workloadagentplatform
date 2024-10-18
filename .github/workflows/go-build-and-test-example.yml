@@ -30,13 +30,13 @@ jobs:
         go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 
     - name: Compile protocol buffers
-      working-directory: integration/example
+      working-directory: ./integration/example
       run: |
         export PATH=${PATH}:`go env GOPATH`/bin
-        protoc --go_opt=paths=source_relative protos/**/*.proto --go_out=.
+        protoc --go_opt=paths=source_relative protos/*.proto --go_out=.
 
     - name: Get the latest dependency versions
-      working-directory: integration/example
+      working-directory: ./integration/example
       run: |
         cp go.mod go.mod.orig
         cp go.sum go.sum.orig
@@ -52,24 +52,24 @@ jobs:
         go clean -modcache
 
     - name: Install dependencies in vendor mode
-      working-directory: integration/example
+      working-directory: ./integration/example
       run: go mod vendor
 
     - name: Build linux binary
-      working-directory: integration/example/cmd
+      working-directory: ./integration/example/cmd
       run: env GOOS=linux GOARCH=amd64 go build -mod=vendor -v -o ../google_cloud_example_agent
 
     - name: Build windows binary
-      working-directory: integration/example/cmd
+      working-directory: ./integration/example/cmd
       run: env GOOS=windows GOARCH=amd64 go build -mod=vendor -v -o ../google_cloud_example_agent
 
     - name: Test
-      working-directory: integration/example
+      working-directory: ./integration/example
       run: go test -v ./...
 
     - name: Notify on failure
       if: ${{ failure() }}
-      uses: cinotify/github-action@v1.1.0
+      uses: cinotify/github-action@main
       with:
         to: 'workload-agent-platform-github-dev@google.com'
         subject: '[Failure] GitHub Workload Agent Platform Example build failure'
