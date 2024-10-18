@@ -1,0 +1,64 @@
+/*
+Copyright 2024 Google LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+syntax = "proto3";
+
+package workloadagenplatform.protos.integration;
+
+option go_package = "github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/protos";
+
+message Integration {
+  // integration_name must follow the following guidelines:
+  // * Lowercase string
+  // * Underscores instead of spaces
+  // * Examples: “example”, “hello_world”
+  string integration_name = 1;
+
+  // agent_name must follow the following guidelines:
+  // * Prefix of “google-cloud-”
+  // * Dashes instead of spaces
+  // * Suffix of “-agent”
+  // * Examples: “google-cloud-example-agent”, “google-cloud-hello-world-agent”
+  string agent_name = 2;
+
+  // agent_binary_name must be the agent_name with dashes replaced with
+  // underscores.
+  // * Examples: “google_cloud_example_agent”, “google_cloud_hello_world_agent”
+  string agent_binary_name = 3;
+
+  // agent_long_name must follow the following guidelines:
+  // * Prefix of “Google Cloud”
+  // * Suffix of “Agent”
+  // * Examples: “Google Cloud Example Agent”, “Google Cloud Hello World Agent”
+  string agent_long_name = 4;
+
+  // agent_version must follow the following guidelines:
+  // * Major version number
+  // * Minor version number
+  // * Examples: “1.0”, “2.1”, “3.2”
+  // Patch versions will be added automatically by the build process.
+  string agent_version = 5;
+}
+
+message CloudProperties {
+  string project_id = 1;
+  string instance_id = 2;
+  string zone = 3;
+  string instance_name = 4;
+  string image = 5;
+  string numeric_project_id = 6;
+  string region = 7;
+  string machine_type = 8;
+}

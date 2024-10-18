@@ -1,0 +1,76 @@
+# This workflow will build and test the platform agents.
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
+
+name: go-build-and-test-example
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+
+  build-example:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: '1.23.2'
+
+    - name: Install Protoc
+      uses: arduino/setup-protoc@v3
+
+    - name: Install protoc-gen-go
+      run: |
+        go install github.com/golang/protobuf/protoc-gen-go@latest
+        go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+
+    - name: Compile protocol buffers
+      working-directory: integration/example
+      run: |
+        export PATH=${PATH}:`go env GOPATH`/bin
+        protoc --go_opt=paths=source_relative protos/**/*.proto --go_out=.
+
+    - name: Get the latest dependency versions
+      working-directory: integration/example
+      run: |
+        cp go.mod go.mod.orig
+        cp go.sum go.sum.orig
+        go clean -modcache
+        go mod tidy
+        echo "**************************** Latest go.mod dependencies ****************************"
+        cat go.mod
+        echo "**************************** Latest go.sum dependencies ****************************"
+        cat go.sum
+        echo "**************************** End of dependencies ****************************"
+        mv go.mod.orig go.mod
+        mv go.sum.orig go.sum
+        go clean -modcache
+
+    - name: Install dependencies in vendor mode
+      working-directory: integration/example
+      run: go mod vendor
+
+    - name: Build linux binary
+      working-directory: integration/example/cmd
+      run: env GOOS=linux GOARCH=amd64 go build -mod=vendor -v -o ../google_cloud_example_agent
+
+    - name: Build windows binary
+      working-directory: integration/example/cmd
+      run: env GOOS=windows GOARCH=amd64 go build -mod=vendor -v -o ../google_cloud_example_agent
+
+    - name: Test
+      working-directory: integration/example
+      run: go test -v ./...
+
+    - name: Notify on failure
+      if: ${{ failure() }}
+      uses: cinotify/github-action@v1.1.0
+      with:
+        to: 'workload-agent-platform-github-dev@google.com'
+        subject: '[Failure] GitHub Workload Agent Platform Example build failure'
+        body: 'There was a failure for the GitHub Workload Agent workflow action.\n\n https://github.com/GoogleCloudPlatform/workloadagentplatform/actions/runs/${{ github.run_id }}'
