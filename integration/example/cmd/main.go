@@ -29,7 +29,7 @@ import (
 	"github.com/GoogleCloudPlatform/sapagent/shared/gce/metadataserver"
 	"github.com/GoogleCloudPlatform/sapagent/shared/log"
 	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/onetime"
-	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/example/persistentflags"
+	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/example/cmd/persistentflags"
 	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/example/onetime/echo"
 	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/example/service"
 

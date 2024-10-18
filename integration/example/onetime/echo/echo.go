@@ -25,7 +25,7 @@ import (
 	"github.com/GoogleCloudPlatform/sapagent/shared/log"
 	cpb "github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/protos"
 	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/usagemetrics"
-	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/example/persistentflags"
+	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/example/cmd/persistentflags"
 	actions "github.com/GoogleCloudPlatform/workloadagentplatform/integration/example/usagemetrics"
 )
 
