@@ -1,12 +1,12 @@
-module github.com/googlestaging/workloadagentplatform/integration/common
+module github.com/GoogleCloudPlatform/workloadagentplatform/integration/common
 
 go 1.22
 
-replace github.com/googlestaging/workloadagentplatform/integration/common/protos v0.0.0 => ./protos
+replace github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/protos v0.0.0 => ./protos
 
-replace github.com/googlestaging/workloadagentplatform/integration/common/onetime v0.0.0 => ./onetime
+replace github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/onetime v0.0.0 => ./onetime
 
-replace github.com/googlestaging/workloadagentplatform/integration/common/usagemetrics v0.0.0 => ./usagemetrics
+replace github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/usagemetrics v0.0.0 => ./usagemetrics
 
 require (
   github.com/GoogleCloudPlatform/sapagent v0.0.0-20240722061404-88fa844c1d59

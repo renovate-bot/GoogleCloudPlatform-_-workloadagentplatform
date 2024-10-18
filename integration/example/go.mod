@@ -1,25 +1,29 @@
-module github.com/googlestaging/workloadagentplatform/integration/example
+module github.com/GoogleCloudPlatform/workloadagentplatform/integration/example
 
-go 1.22
+go 1.23
 
-replace github.com/googlestaging/workloadagentplatform/integration/example/cmd v0.0.0 => ./cmd
+replace github.com/GoogleCloudPlatform/workloadagentplatform/integration/example/cmd v0.0.0 => ./cmd
 
-replace github.com/googlestaging/workloadagentplatform/integration/example/service v0.0.0 => ./service
+replace github.com/GoogleCloudPlatform/workloadagentplatform/integration/example/service v0.0.0 => ./service
 
-replace github.com/googlestaging/workloadagentplatform/integration/example/protos v0.0.0 => ./protos
+replace github.com/GoogleCloudPlatform/workloadagentplatform/integration/example/protos v0.0.0 => ./protos
 
-replace github.com/googlestaging/workloadagentplatform/integration/common v0.0.0 => ../common
+replace github.com/GoogleCloudPlatform/workloadagentplatform/integration/example/onetime v0.0.0 => ./onetime
 
-replace github.com/googlestaging/workloadagentplatform/integration/common/protos v0.0.0 => ../common/protos
+replace github.com/GoogleCloudPlatform/workloadagentplatform/integration/example/usagemetrics v0.0.0 => ./usagemetrics
 
-replace github.com/googlestaging/workloadagentplatform/integration/common/onetime v0.0.0 => ../common/onetime
+replace github.com/GoogleCloudPlatform/workloadagentplatform/integration/common v0.0.0 => ../common
 
-replace github.com/googlestaging/workloadagentplatform/integration/common/usagemetrics v0.0.0 => ../common/usagemetrics
+replace github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/protos v0.0.0 => ../common/protos
+
+replace github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/onetime v0.0.0 => ../common/onetime
+
+replace github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/usagemetrics v0.0.0 => ../common/usagemetrics
 
 require (
   github.com/GoogleCloudPlatform/sapagent v0.0.0-20240722061404-88fa844c1d59
   github.com/google/subcommands v1.2.0
-  github.com/googlestaging/workloadagentplatform/integration/common v0.0.0
+  github.com/GoogleCloudPlatform/workloadagentplatform/integration/common v0.0.0
   go.uber.org/zap v1.24.0
   google.golang.org/protobuf v1.34.3-0.20240708074925-b46f280f9725
 )
