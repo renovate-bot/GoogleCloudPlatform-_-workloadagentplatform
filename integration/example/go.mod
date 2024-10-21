@@ -21,9 +21,10 @@ replace github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/
 replace github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/usagemetrics v0.0.0 => ../common/usagemetrics
 
 require (
-  github.com/GoogleCloudPlatform/sapagent v0.0.0-20240722061404-88fa844c1d59
-  github.com/google/subcommands v1.2.0
+  github.com/GoogleCloudPlatform/sapagent v1.5.2-0.20241015171556-8aee46464472
   github.com/GoogleCloudPlatform/workloadagentplatform/integration/common v0.0.0
+  github.com/spf13/cobra v1.8.1
+  github.com/spf13/pflag v1.0.5
   go.uber.org/zap v1.24.0
   google.golang.org/protobuf v1.34.3-0.20240708074925-b46f280f9725
 )
@@ -44,7 +45,9 @@ require (
   github.com/google/uuid v1.6.0 // indirect
   github.com/googleapis/enterprise-certificate-proxy v0.3.2 // indirect
   github.com/googleapis/gax-go/v2 v2.12.2 // indirect
+  github.com/inconshreveable/mousetrap v1.1.0 // indirect
   github.com/jonboulle/clockwork v0.4.1-0.20230717050334-b1209715e43c // indirect
+  github.com/kardianos/service v1.2.2 // indirect
   github.com/natefinch/lumberjack v0.0.0-20230119042236-215739b3bcdc // indirect
   github.com/pkg/errors v0.9.1 // indirect
   go.opencensus.io v0.24.0 // indirect
