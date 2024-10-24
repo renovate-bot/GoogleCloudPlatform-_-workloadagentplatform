@@ -59,7 +59,13 @@ func registerSubCommands(ctx context.Context, lp log.Parameters, cp *cpb.CloudPr
 	daemon := service.NewDaemon(lp, cp, agentIntegration)
 	service.PopulateDaemonFlagValues(daemon, rootCmd.Flags())
 	daemonCommand := service.NewDaemonSubcommand(ctx, daemon)
-	rootCmd.AddCommand(daemonCommand)
+	// When running on windows, the daemon is started using the winservice subcommand.
+	// Having both the daemon command and the winservice command will cause an error when the
+	// winservice tries to start the daemon, cobra will start the parent which is the winservice
+	// causing a loop.
+	if lp.OSType != "windows" {
+		rootCmd.AddCommand(daemonCommand)
+	}
 
 	// Disabling plugin capabilities until it is ready for release.
 	// plugin := service.NewPlugin(daemon)
@@ -68,7 +74,7 @@ func registerSubCommands(ctx context.Context, lp log.Parameters, cp *cpb.CloudPr
 	// rootCmd.AddCommand(pluginCommand)
 
 	// Add any additional windows or linux specific subcommands.
-	rootCmd.AddCommand(additionalSubcommands(ctx, agentIntegration, daemonCommand, lp, cp)...)
+	rootCmd.AddCommand(additionalSubcommands(ctx, agentIntegration, daemonCommand)...)
 
 	rootCmd.SetArgs(flag.Args())
 	// Persistent flags are set at the root command level and available to all subcommands.

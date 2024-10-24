@@ -24,6 +24,6 @@ import (
 	cpb "github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/protos"
 )
 
-func additionalSubcommands(ctx context.Context, i *cpb.Integration, d *cobra.Command, dargs ...any) []*cobra.Command {
-	return []*cobra.Command{onetime.NewWinServiceCommand(ctx, i, d, dargs)}
+func additionalSubcommands(ctx context.Context, i *cpb.Integration, d *cobra.Command) []*cobra.Command {
+	return []*cobra.Command{onetime.NewWinServiceCommand(ctx, i, d)}
 }

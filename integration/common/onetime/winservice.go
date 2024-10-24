@@ -32,7 +32,6 @@ type Winservice struct {
 	Integration *cpb.Integration
 	Service     winsvc.Service
 	Daemon      *cobra.Command
-	DaemonArgs  []any
 	// NOTE: Context is needed because kardianos/service for windows does not pass the context
 	// to the service.Start(), service.Stop(), and service .Run() methods.
 	ctx context.Context
@@ -58,16 +57,15 @@ func (w *Winservice) run() {
 }
 
 // NewWinServiceCommand returns a new winservice command.
-func NewWinServiceCommand(ctx context.Context, integration *cpb.Integration, daemon *cobra.Command, daemonArgs []any) *cobra.Command {
+func NewWinServiceCommand(ctx context.Context, integration *cpb.Integration, daemon *cobra.Command) *cobra.Command {
 	w := &Winservice{
 		Integration: integration,
 		Daemon:      daemon,
-		DaemonArgs:  daemonArgs,
 		ctx:         ctx,
 	}
 	wsCmd := &cobra.Command{
 		Use:   "winservice",
-		Short: "operations for windows service operations",
+		Short: "windows service operations",
 		RunE:  w.Execute,
 	}
 	wsCmd.SetContext(ctx)
@@ -84,23 +82,23 @@ func (w *Winservice) Execute(cmd *cobra.Command, args []string) error {
 	}
 	s, err := winsvc.New(w, config)
 	if err != nil {
-		return fmt.Errorf("error creating Windows service manager interface for service %s: %s",
+		return fmt.Errorf("Winservice Execute - error creating Windows service manager interface for service %s: %s",
 			w.Integration.GetAgentName(), err)
 	}
 	w.Service = s
 
 	winlogger, err = s.Logger(nil)
 	if err != nil {
-		return fmt.Errorf("error creating Windows Event Logger for service %s: %s",
+		return fmt.Errorf("Winservice Execute - error creating Windows Event Logger for service %s: %s",
 			w.Integration.GetAgentName(), err)
 	}
-	fmt.Println(fmt.Sprintf("Starting the %s service", w.Integration.GetAgentName()))
-	winlogger.Info(fmt.Sprintf("Starting the %s service", w.Integration.GetAgentName()))
+	fmt.Println(fmt.Sprintf("Winservice Execute -Starting the %s service", w.Integration.GetAgentName()))
+	winlogger.Info(fmt.Sprintf("Winservice Execute - Starting the %s service", w.Integration.GetAgentName()))
 
 	err = s.Run()
 	if err != nil {
 		winlogger.Error(err)
 	}
-	winlogger.Info(fmt.Sprintf("The %s service is shutting down", w.Integration.GetAgentName()))
+	winlogger.Info(fmt.Sprintf("Winservice Execute - The %s service is shutting down", w.Integration.GetAgentName()))
 	return nil
 }

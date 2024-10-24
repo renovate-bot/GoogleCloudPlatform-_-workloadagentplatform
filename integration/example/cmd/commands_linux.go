@@ -23,6 +23,6 @@ import (
 	cpb "github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/protos"
 )
 
-func additionalSubcommands(ctx context.Context, i *cpb.Integration, d *cobra.Command, dargs ...any) []*cobra.Command {
+func additionalSubcommands(ctx context.Context, i *cpb.Integration, d *cobra.Command) []*cobra.Command {
 	return nil
 }
