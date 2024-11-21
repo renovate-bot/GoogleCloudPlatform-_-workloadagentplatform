@@ -27,9 +27,9 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"google3/third_party/sapagent/shared/log/log"
-	"google3/third_party/sapagent/shared/recovery/recovery"
 	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/common"
+	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/log"
+	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/recovery"
 	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/usagemetrics"
 
 	cpb "github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/protos"

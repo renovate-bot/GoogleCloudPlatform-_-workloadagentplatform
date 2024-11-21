@@ -22,8 +22,8 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"google3/third_party/sapagent/shared/log/log"
 	cpb "github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/protos"
+	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/log"
 	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/usagemetrics"
 	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/example/cmd/persistentflags"
 	actions "github.com/GoogleCloudPlatform/workloadagentplatform/integration/example/usagemetrics"

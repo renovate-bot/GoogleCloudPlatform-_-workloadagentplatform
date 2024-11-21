@@ -21,9 +21,9 @@ import (
 	"time"
 
 	"github.com/jonboulle/clockwork"
-	"google3/third_party/sapagent/shared/log/log"
-	"google3/third_party/sapagent/shared/usagemetrics/usagemetrics"
 	cpb "github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/protos"
+	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/log"
+	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/usagemetrics"
 )
 
 // The following status values are supported.
