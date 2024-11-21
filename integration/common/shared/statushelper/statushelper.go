@@ -26,7 +26,7 @@ import (
 
 	"github.com/google/safetext/shsprintf"
 	"github.com/fatih/color"
-	spb "github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/protos/shared/status"
+	spb "google3/third_party/workloadagentplatform/integration/common/protos/shared/status/status_go_proto"
 	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/commandlineexecutor"
 )
 

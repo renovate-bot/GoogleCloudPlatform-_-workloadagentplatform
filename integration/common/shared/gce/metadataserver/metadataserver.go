@@ -34,7 +34,7 @@ import (
 	"github.com/cenkalti/backoff/v4"
 	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/log"
 
-	instancepb "github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/protos/shared/instanceinfo"
+	instancepb "google3/third_party/workloadagentplatform/integration/common/protos/shared/instanceinfo/instanceinfo_go_proto"
 )
 
 // Default values if information cannot be obtained from the metadata server.

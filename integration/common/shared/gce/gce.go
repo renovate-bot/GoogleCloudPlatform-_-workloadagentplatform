@@ -29,7 +29,7 @@ import (
 	smpb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1"
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/file/v1"
-	ipb "github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/protos/shared/instanceinfo"
+	ipb "google3/third_party/workloadagentplatform/integration/common/protos/shared/instanceinfo/instanceinfo_go_proto"
 	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/log"
 )
 

@@ -21,7 +21,7 @@ import (
 
 	"github.com/pkg/errors"
 	"google.golang.org/api/option"
-	dwpb "github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/protos/shared/datawarehouse"
+	dwpb "google3/third_party/workloadagentplatform/integration/common/protos/shared/datawarehouse/datawarehouse_go_proto"
 	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/gce/wlm/wlm"
 	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/log"
 )

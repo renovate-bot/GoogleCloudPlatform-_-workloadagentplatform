@@ -32,7 +32,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/log"
 
-	dwpb "github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/protos/shared/datawarehouse"
+	dwpb "google3/third_party/workloadagentplatform/integration/common/protos/shared/datawarehouse/datawarehouse_go_proto"
 )
 
 const (
