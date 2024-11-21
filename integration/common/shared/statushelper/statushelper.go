@@ -26,8 +26,8 @@ import (
 
 	"github.com/google/safetext/shsprintf"
 	"github.com/fatih/color"
-	spb "google3/third_party/workloadagentplatform/integration/common/protos/shared/status/status_go_proto"
 	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/commandlineexecutor"
+	spb "github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/protos/status"
 )
 
 // Define color codes as an enum

@@ -21,9 +21,9 @@ import (
 
 	"github.com/pkg/errors"
 	"google.golang.org/api/option"
-	dwpb "google3/third_party/workloadagentplatform/integration/common/protos/shared/datawarehouse/datawarehouse_go_proto"
 	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/gce/wlm/wlm"
 	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/log"
+	dwpb "github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/protos/datawarehouse"
 )
 
 // WLM is a wrapper for Workload Manager API services.

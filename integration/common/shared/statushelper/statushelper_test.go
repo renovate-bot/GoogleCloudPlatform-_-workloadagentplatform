@@ -28,8 +28,8 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/fatih/color"
-	spb "google3/third_party/workloadagentplatform/integration/common/protos/shared/status/status_go_proto"
 	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/commandlineexecutor"
+	spb "github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/protos/status"
 )
 
 type fakeExecutor struct {

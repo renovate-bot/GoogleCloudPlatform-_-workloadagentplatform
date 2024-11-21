@@ -30,8 +30,8 @@ import (
 
 	anypb "google.golang.org/protobuf/types/known/anypb"
 	acpb "github.com/GoogleCloudPlatform/agentcommunication_client/gapic/agentcommunicationpb"
-	gpb "google3/third_party/workloadagentplatform/integration/common/protos/shared/guestactions/guestactions_go_proto"
-	ipb "google3/third_party/workloadagentplatform/integration/common/protos/shared/instanceinfo/instanceinfo_go_proto"
+	gpb "github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/protos/guestactions"
+	ipb "github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/protos/instanceinfo"
 )
 
 const (

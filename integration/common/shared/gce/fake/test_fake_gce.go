@@ -24,7 +24,7 @@ import (
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/file/v1"
 
-	ipb "google3/third_party/workloadagentplatform/integration/common/protos/shared/instanceinfo/instanceinfo_go_proto"
+	ipb "github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/protos/instanceinfo"
 )
 
 // GetDiskArguments is a struct to match arguments passed in to the GetDisk function for validation.

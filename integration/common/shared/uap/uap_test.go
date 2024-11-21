@@ -31,8 +31,8 @@ import (
 	"google.golang.org/api/option"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/testing/protocmp"
-	gpb "google3/third_party/workloadagentplatform/integration/common/protos/shared/guestactions/guestactions_go_proto"
-	ipb "google3/third_party/workloadagentplatform/integration/common/protos/shared/instanceinfo/instanceinfo_go_proto"
+	gpb "github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/protos/guestactions"
+	ipb "github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/protos/instanceinfo"
 )
 
 func wrapAny(t *testing.T, m proto.Message) *apb.Any {

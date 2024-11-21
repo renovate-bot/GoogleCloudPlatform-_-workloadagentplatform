@@ -29,7 +29,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"google.golang.org/protobuf/testing/protocmp"
-	instancepb "google3/third_party/workloadagentplatform/integration/common/protos/shared/instanceinfo/instanceinfo_go_proto"
+	instancepb "github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/protos/instanceinfo"
 )
 
 func marshalResponse(t *testing.T, r metadataServerResponse) string {
