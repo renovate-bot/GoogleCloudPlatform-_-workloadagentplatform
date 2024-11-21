@@ -21,8 +21,8 @@ import (
 	"time"
 
 	"github.com/jonboulle/clockwork"
-	"github.com/GoogleCloudPlatform/sapagent/shared/log"
-	"github.com/GoogleCloudPlatform/sapagent/shared/usagemetrics"
+	"google3/third_party/sapagent/shared/log/log"
+	"google3/third_party/sapagent/shared/usagemetrics/usagemetrics"
 	cpb "github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/protos"
 )
 

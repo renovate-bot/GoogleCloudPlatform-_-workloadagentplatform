@@ -20,7 +20,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/GoogleCloudPlatform/sapagent/shared/log"
+	"google3/third_party/sapagent/shared/log/log"
 	pb "github.com/GoogleCloudPlatform/workloadagentplatform/integration/example/protos"
 	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/example/usagemetrics"
 )

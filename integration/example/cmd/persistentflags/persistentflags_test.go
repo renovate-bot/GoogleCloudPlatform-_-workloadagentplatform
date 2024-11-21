@@ -24,7 +24,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"go.uber.org/zap/zapcore"
-	"github.com/GoogleCloudPlatform/sapagent/shared/log"
+	"google3/third_party/sapagent/shared/log/log"
 )
 
 func executeCommand(root *cobra.Command, args ...string) (c *cobra.Command, output string, err error) {

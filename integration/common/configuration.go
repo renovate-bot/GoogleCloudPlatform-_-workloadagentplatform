@@ -22,7 +22,7 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"go.uber.org/zap/zapcore"
-	"github.com/GoogleCloudPlatform/sapagent/shared/log"
+	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/log"
 	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/usagemetrics"
 )
 
