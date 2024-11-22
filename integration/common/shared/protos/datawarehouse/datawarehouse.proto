@@ -20,7 +20,7 @@ syntax = "proto3";
 package cloud.partners.sap.datawarehouse;
 
 import "google/protobuf/timestamp.proto";
-import "third_party/sapagent/protos/system/system.proto";
+import "integration/common/shared/protos/system/system.proto";
 
 option go_package = "./datawarehouse";
 
