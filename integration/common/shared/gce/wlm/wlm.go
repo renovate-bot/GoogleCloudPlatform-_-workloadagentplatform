@@ -25,6 +25,7 @@ import (
 	"net/http"
 	"runtime"
 
+	"github.com/pkg/errors"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option/internaloption"
 	"google.golang.org/api/option"
@@ -40,6 +41,28 @@ const (
 	mtlsBasePath          = "https://workloadmanager-datawarehouse.mtls.googleapis.com/"
 	defaultUniverseDomain = "googleapis.com"
 )
+
+// WLM is a wrapper for Workload Manager API services.
+type WLM struct {
+	service *DataWarehouseService
+}
+
+// NewWLMClient creates a new WLM service wrapper.
+func NewWLMClient(ctx context.Context, basePath string) (*WLM, error) {
+	s, err := NewService(ctx, option.WithEndpoint(basePath))
+	if err != nil {
+		return nil, errors.Wrap(err, "error creating WLM client")
+	}
+	log.Logger.Infow("WLM Service with base path", "basePath", s.BasePath)
+	return &WLM{s}, nil
+}
+
+// WriteInsight wraps a call to the WLM insights:write API.
+func (w *WLM) WriteInsight(project string, location string, writeInsightRequest *dwpb.WriteInsightRequest) error {
+	res, err := w.service.WriteInsight(project, location, writeInsightRequest)
+	log.Logger.Debugw("WriteInsight response", "res", res, "err", err)
+	return err
+}
 
 // DataWarehouseService implements the Data Warehouse service.
 type DataWarehouseService struct {
