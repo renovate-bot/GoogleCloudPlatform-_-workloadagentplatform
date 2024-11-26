@@ -16,7 +16,7 @@ limitations under the License.
 
 syntax = "proto3";
 
-package sapagent.protos.instanceinfo;
+package cloud.partners.gwap.instanceinfo;
 
 option go_package = "./instanceinfo";
 

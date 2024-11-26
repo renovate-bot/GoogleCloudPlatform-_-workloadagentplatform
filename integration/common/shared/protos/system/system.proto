@@ -15,7 +15,7 @@ limitations under the License.
 */
 syntax = "proto3";
 
-package cloud.partners.sap.system;
+package cloud.partners.gwap.system;
 
 import "google/protobuf/timestamp.proto";
 

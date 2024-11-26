@@ -17,12 +17,12 @@ limitations under the License.
 
 syntax = "proto3";
 
-package sapagent.protos.guestactions;
+package cloud.partners.gwap.guestactions;
 
 import "google/protobuf/any.proto";
 
 option java_multiple_files = true;
-option java_package = "sapagent.protos.guestactions";
+option java_package = "cloud.partners.gwap.guestactions";
 option go_package = "./guestactions";
 
 /**

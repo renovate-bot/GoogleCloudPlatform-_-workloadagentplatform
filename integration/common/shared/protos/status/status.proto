@@ -16,7 +16,7 @@ limitations under the License.
 
 syntax = "proto3";
 
-package sapagent.protos.status;
+package cloud.partners.gwap.status;
 
 option go_package = "./status";
 

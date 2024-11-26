@@ -48,7 +48,7 @@ message Insight {
 
   // The insights data for SAP system discovery. This is a copy of SAP System
   // proto and should get updated whenever that one changes.
-  cloud.partners.sap.system.SapDiscovery sap_discovery = 3;
+  cloud.partners.gwap.system.SapDiscovery sap_discovery = 3;
 
   string sqlserver_validation = 4;
 
