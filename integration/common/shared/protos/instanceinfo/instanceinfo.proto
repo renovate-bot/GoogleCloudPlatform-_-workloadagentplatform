@@ -16,9 +16,9 @@ limitations under the License.
 
 syntax = "proto3";
 
-package cloud.partners.gwap.instanceinfo;
+package workloadagentplatform.integration.common.shared.protos.instanceinfo;
 
-option go_package = "./instanceinfo";
+option go_package = "github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/protos/instanceinfo";
 
 message CloudProperties {
   string project_id = 1;

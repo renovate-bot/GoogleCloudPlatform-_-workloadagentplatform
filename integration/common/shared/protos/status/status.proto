@@ -16,9 +16,9 @@ limitations under the License.
 
 syntax = "proto3";
 
-package cloud.partners.gwap.status;
+package workloadagentplatform.integration.common.shared.protos.status;
 
-option go_package = "./status";
+option go_package = "github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/protos/status";
 
 message AgentStatus {
   string installed_version = 1;

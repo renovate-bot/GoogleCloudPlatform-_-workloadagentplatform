@@ -14,15 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-
 syntax = "proto3";
 
-package cloud.partners.sap.datawarehouse;
+package workloadagentplatform.integration.common.shared.protos.datawarehouse;
 
 import "google/protobuf/timestamp.proto";
 import "integration/common/shared/protos/system/system.proto";
 
-option go_package = "./datawarehouse";
+option go_package = "github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/protos/datawarehouse";
 
 // Request for sending the data insights.
 message WriteInsightRequest {
@@ -48,7 +47,8 @@ message Insight {
 
   // The insights data for SAP system discovery. This is a copy of SAP System
   // proto and should get updated whenever that one changes.
-  cloud.partners.gwap.system.SapDiscovery sap_discovery = 3;
+  workloadagentplatform.integration.common.shared.protos.system.SapDiscovery
+      sap_discovery = 3;
 
   string sqlserver_validation = 4;
 
