@@ -18,7 +18,7 @@ syntax = "proto3";
 
 package workloadagentplatform.integration.common.shared.protos.instanceinfo;
 
-option go_package = "github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/protos/instanceinfo";
+option go_package = "instanceinfo";
 
 message CloudProperties {
   string project_id = 1;
