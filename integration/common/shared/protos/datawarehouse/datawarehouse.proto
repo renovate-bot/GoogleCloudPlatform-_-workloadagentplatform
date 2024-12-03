@@ -21,7 +21,7 @@ package workloadagentplatform.integration.common.shared.protos.datawarehouse;
 import "google/protobuf/timestamp.proto";
 import "integration/common/shared/protos/system/system.proto";
 
-option go_package = "datawarehouse";
+option go_package = "github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/protos/datawarehouse";
 
 // Request for sending the data insights.
 message WriteInsightRequest {

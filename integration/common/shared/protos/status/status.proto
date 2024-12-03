@@ -18,7 +18,7 @@ syntax = "proto3";
 
 package workloadagentplatform.integration.common.shared.protos.status;
 
-option go_package = "status";
+option go_package = "github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/protos/status";
 
 message AgentStatus {
   string installed_version = 1;
