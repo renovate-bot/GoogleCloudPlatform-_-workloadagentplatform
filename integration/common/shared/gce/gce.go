@@ -29,8 +29,8 @@ import (
 	smpb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1"
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/file/v1"
+	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/gce/metadataserver"
 	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/log"
-	ipb "github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/protos/instanceinfo"
 )
 
 // GCE is a wrapper for Google Compute Engine services.
@@ -99,7 +99,7 @@ func (g *GCE) ListDisks(project, zone, filter string) (*compute.DiskList, error)
 }
 
 // ListZoneOperations retrieves a list of Operations resources defined by the project, and zone provided.
-// Results will be filtered according to the provided filter string, and limit the number jof results to maxResults.
+// Results will be filtered according to the provided filter string, and limit the number of results to maxResults.
 func (g *GCE) ListZoneOperations(project, zone, filter string, maxResults int64) (*compute.OperationList, error) {
 	s := g.service.ZoneOperations.List(project, zone)
 	if filter != "" {
@@ -360,13 +360,13 @@ func (g *GCE) WaitForDiskOpCompletionWithRetry(ctx context.Context, op *compute.
 }
 
 // AttachDisk attaches the disk with the given name to the instance.
-func (g *GCE) AttachDisk(ctx context.Context, diskName string, cp *ipb.CloudProperties, project, dataDiskZone string) error {
+func (g *GCE) AttachDisk(ctx context.Context, diskName string, cp *metadataserver.CloudProperties, project, dataDiskZone string) error {
 	log.CtxLogger(ctx).Infow("Attaching disk", "diskName", diskName)
 	attachDiskToVM := &compute.AttachedDisk{
 		DeviceName: diskName, // Keep the device name and disk name same.
 		Source:     fmt.Sprintf("projects/%s/zones/%s/disks/%s", project, dataDiskZone, diskName),
 	}
-	op, err := g.service.Instances.AttachDisk(project, dataDiskZone, cp.GetInstanceName(), attachDiskToVM).Do()
+	op, err := g.service.Instances.AttachDisk(project, dataDiskZone, cp.InstanceName, attachDiskToVM).Do()
 	if err != nil {
 		return fmt.Errorf("failed to attach disk: %v", err)
 	}
@@ -377,9 +377,9 @@ func (g *GCE) AttachDisk(ctx context.Context, diskName string, cp *ipb.CloudProp
 }
 
 // DetachDisk detaches given disk from the instance.
-func (g *GCE) DetachDisk(ctx context.Context, cp *ipb.CloudProperties, project, dataDiskZone, dataDiskName, dataDiskDeviceName string) error {
+func (g *GCE) DetachDisk(ctx context.Context, cp *metadataserver.CloudProperties, project, dataDiskZone, dataDiskName, dataDiskDeviceName string) error {
 	log.CtxLogger(ctx).Infow("Detatching disk", "diskName", dataDiskName, "deviceName", dataDiskDeviceName)
-	op, err := g.service.Instances.DetachDisk(project, dataDiskZone, cp.GetInstanceName(), dataDiskDeviceName).Do()
+	op, err := g.service.Instances.DetachDisk(project, dataDiskZone, cp.InstanceName, dataDiskDeviceName).Do()
 	if err != nil {
 		return fmt.Errorf("failed to detach old data disk: %v", err)
 	}
@@ -387,7 +387,7 @@ func (g *GCE) DetachDisk(ctx context.Context, cp *ipb.CloudProperties, project, 
 		return fmt.Errorf("detach data disk operation failed: %v", err)
 	}
 
-	_, ok, err := g.DiskAttachedToInstance(project, dataDiskZone, cp.GetInstanceName(), dataDiskName)
+	_, ok, err := g.DiskAttachedToInstance(project, dataDiskZone, cp.InstanceName, dataDiskName)
 	if err != nil {
 		return fmt.Errorf("failed to check if disk %v is still attached to the instance", dataDiskName)
 	}

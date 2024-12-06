@@ -115,7 +115,7 @@ func TestQueryTimeSeriesWithRetry(t *testing.T) {
 			{
 				PointData: []*mrpb.TimeSeriesData_PointData{
 					{
-						Values: []*cpb.TypedValue{{Value: &cpb.TypedValue_DoubleValue{v}}},
+						Values: []*cpb.TypedValue{{Value: &cpb.TypedValue_DoubleValue{DoubleValue: v}}},
 					},
 				},
 			},

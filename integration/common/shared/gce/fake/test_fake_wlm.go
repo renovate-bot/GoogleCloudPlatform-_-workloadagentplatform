@@ -22,8 +22,8 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"google.golang.org/protobuf/testing/protocmp"
-	syspb "github.com/GoogleCloudPlatform/sapagent/protos/system"
 	dwpb "github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/protos/datawarehouse"
+	syspb "github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/protos/system"
 )
 
 var (

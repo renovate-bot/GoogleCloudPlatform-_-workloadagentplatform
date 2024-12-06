@@ -23,8 +23,7 @@ import (
 
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/file/v1"
-
-	ipb "github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/protos/instanceinfo"
+	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/gce/metadataserver"
 )
 
 // GetDiskArguments is a struct to match arguments passed in to the GetDisk function for validation.
@@ -373,12 +372,12 @@ func (g *TestGCE) WaitForSnapshotUploadCompletionWithRetry(ctx context.Context, 
 }
 
 // AttachDisk fakes calls to the cloud APIs to attach a disk to an instance.
-func (g *TestGCE) AttachDisk(ctx context.Context, diskName string, cp *ipb.CloudProperties, project, dataDiskZone string) error {
+func (g *TestGCE) AttachDisk(ctx context.Context, diskName string, cp *metadataserver.CloudProperties, project, dataDiskZone string) error {
 	return g.AttachDiskErr
 }
 
 // DetachDisk fakes calls to the cloud APIs to detach a disk from an instance.
-func (g *TestGCE) DetachDisk(ctx context.Context, cp *ipb.CloudProperties, project, dataDiskZone, dataDiskName, dataDiskDeviceName string) error {
+func (g *TestGCE) DetachDisk(ctx context.Context, cp *metadataserver.CloudProperties, project, dataDiskZone, dataDiskName, dataDiskDeviceName string) error {
 	return g.DetachDiskErr
 }
 

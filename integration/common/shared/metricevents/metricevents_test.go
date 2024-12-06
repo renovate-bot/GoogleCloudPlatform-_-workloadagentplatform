@@ -19,6 +19,7 @@ package metricevents
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -152,6 +153,11 @@ func TestAddEvent(t *testing.T) {
 			}
 			AddEvent(context.Background(), test.p1)
 			got := AddEvent(context.Background(), test.p2)
+			// Monkey patch the log delay to 0 for testing.
+			defer func(oldDelay time.Duration) {
+				defaultLogDelay = oldDelay
+			}(defaultLogDelay)
+			defaultLogDelay = 0
 			if got != test.wantUpdate {
 				t.Errorf("AddEvent(%v, %v)=%v, want %v", test.p1, test.p2, got, test.wantUpdate)
 			}

@@ -33,8 +33,6 @@ import (
 
 	"github.com/cenkalti/backoff/v4"
 	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/log"
-
-	instancepb "github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/protos/instanceinfo"
 )
 
 // Default values if information cannot be obtained from the metadata server.
@@ -94,35 +92,10 @@ type (
 
 	// CloudProperties contains the cloud properties of the instance.
 	CloudProperties struct {
-		ProjectID, NumericProjectID, InstanceID, Zone, InstanceName, Image, MachineType string
-		Scopes                                                                          []string
+		ProjectID, NumericProjectID, InstanceID, Zone, InstanceName, Image, MachineType, Region string
+		Scopes                                                                                  []string
 	}
 )
-
-// CloudPropertiesWithRetry fetches information from the GCE metadata server with a retry mechanism.
-//
-// If there are any persistent errors in fetching this information, then the error will be logged
-// and the return value will be nil.
-// This API will be deprecated and replaced by ReadCloudPropertiesWithRetry once the consumers have been migrated.
-func CloudPropertiesWithRetry(bo backoff.BackOff) *instancepb.CloudProperties {
-	var (
-		attempt = 1
-		cp      *instancepb.CloudProperties
-	)
-	err := backoff.Retry(func() error {
-		var err error
-		cp, err = requestCloudProperties()
-		if err != nil {
-			log.Logger.Warnw("Error in requestCloudProperties", "attempt", attempt, "error", err)
-			attempt++
-		}
-		return err
-	}, bo)
-	if err != nil {
-		log.Logger.Errorw("CloudProperties request retry limit exceeded", log.Error(err))
-	}
-	return cp
-}
 
 // ReadCloudPropertiesWithRetry fetches information from the GCE metadata server with a retry mechanism.
 //
@@ -206,55 +179,6 @@ func get(uri, queryString string) ([]byte, error) {
 		return nil, fmt.Errorf("failed to read response body from metadata server: %v", err)
 	}
 	return body, nil
-}
-
-// requestCloudProperties attempts to fetch information from the GCE metadata server.
-// This function will be deprecated and replaced by requestProperties once the consumers have been migrated.
-func requestCloudProperties() (*instancepb.CloudProperties, error) {
-	body, err := get(cloudPropertiesURI, "recursive=true")
-	if err != nil {
-		return nil, err
-	}
-	resBodyJSON := &metadataServerResponse{}
-	if err = json.Unmarshal(body, resBodyJSON); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response body from metadata server: %v", err)
-	}
-
-	project := resBodyJSON.Project
-	projectID := project.ProjectID
-	numericProjectID := strconv.FormatInt(int64(project.NumericProjectID), 10)
-	instance := resBodyJSON.Instance
-	instanceID := strconv.FormatInt(int64(instance.ID), 10)
-	zone := parseZone(instance.Zone)
-	machineType := parseMachineType(instance.MachineType)
-	instanceName := instance.Name
-	image := instance.Image
-	scopes := instance.ServiceAccounts.DefaultInfo.Scopes
-
-	if image == "" {
-		image = ImageUnknown
-	}
-	if machineType == "" {
-		machineType = MachineTypeUnknown
-	}
-
-	log.Logger.Debugw("Default Cloud Properties from metadata server",
-		"projectid", projectID, "projectnumber", numericProjectID, "instanceid", instanceID, "zone", zone, "instancename", instanceName, "image", image, "machinetype", machineType, "scopes", scopes)
-
-	if projectID == "" || numericProjectID == "0" || instanceID == "0" || zone == "" || instanceName == "" {
-		return nil, fmt.Errorf("metadata server responded with incomplete information")
-	}
-
-	return &instancepb.CloudProperties{
-		ProjectId:        projectID,
-		NumericProjectId: numericProjectID,
-		InstanceId:       instanceID,
-		Zone:             zone,
-		InstanceName:     instanceName,
-		Image:            image,
-		MachineType:      machineType,
-		Scopes:           scopes,
-	}, nil
 }
 
 // requestProperties attempts to fetch information from the GCE metadata server.

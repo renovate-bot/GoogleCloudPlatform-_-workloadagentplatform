@@ -36,11 +36,13 @@ message AgentStatus {
 
 message ServiceStatus {
   string name = 1;
-  bool enabled = 2;
+  State state = 2;
   State fully_functional = 3;
   string error_message = 4;
   repeated IAMPermission iam_permissions = 5;
   repeated ConfigValue config_values = 6;
+  // TODO: Rename the field based on the intent.
+  string enabled_unspecified_message = 7;
 }
 
 message IAMPermission {

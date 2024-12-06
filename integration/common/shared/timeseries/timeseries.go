@@ -23,24 +23,13 @@ import (
 	cpb "google.golang.org/genproto/googleapis/monitoring/v3"
 	mrpb "google.golang.org/genproto/googleapis/monitoring/v3"
 	tpb "google.golang.org/protobuf/types/known/timestamppb"
-	ipb "github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/protos/instanceinfo"
+	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/gce/metadataserver"
 )
-
-// CloudProperties has the necessary data to create a timeseries points.
-type CloudProperties struct {
-	ProjectID        string
-	InstanceID       string
-	Zone             string
-	InstanceName     string
-	Image            string
-	NumericProjectID string
-	Region           string
-}
 
 // Params has the necessary data to create a timeseries points.
 type Params struct {
 	BareMetal    bool
-	CloudProp    *CloudProperties
+	CloudProp    *metadataserver.CloudProperties
 	MetricType   string
 	MetricLabels map[string]string
 	MetricKind   mpb.MetricDescriptor_MetricKind
@@ -49,19 +38,6 @@ type Params struct {
 	Int64Value   int64
 	Float64Value float64
 	BoolValue    bool
-}
-
-// ConvertCloudProperties converts Cloud Properties proto to CloudProperties struct.
-func ConvertCloudProperties(cp *ipb.CloudProperties) *CloudProperties {
-	return &CloudProperties{
-		ProjectID:        cp.GetProjectId(),
-		InstanceID:       cp.GetInstanceId(),
-		Zone:             cp.GetZone(),
-		InstanceName:     cp.GetInstanceName(),
-		Image:            cp.GetImage(),
-		NumericProjectID: cp.GetNumericProjectId(),
-		Region:           cp.GetRegion(),
-	}
 }
 
 // BuildInt builds a cloud monitoring timeseries with Int64 point.
@@ -138,7 +114,7 @@ func buildTimeSeries(p Params) *mrpb.TimeSeries {
 	}
 }
 
-func monitoredResource(cp *CloudProperties, bareMetal bool) *mrespb.MonitoredResource {
+func monitoredResource(cp *metadataserver.CloudProperties, bareMetal bool) *mrespb.MonitoredResource {
 	if bareMetal {
 		return &mrespb.MonitoredResource{
 			Type: "generic_node",

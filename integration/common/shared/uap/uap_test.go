@@ -31,8 +31,8 @@ import (
 	"google.golang.org/api/option"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/testing/protocmp"
+	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/gce/metadataserver"
 	gpb "github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/protos/guestactions"
-	ipb "github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/protos/instanceinfo"
 )
 
 func wrapAny(t *testing.T, m proto.Message) *apb.Any {
@@ -329,7 +329,7 @@ func TestCommunicateWithUAP(t *testing.T) {
 			receive = test.receive
 			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 			defer cancel()
-			got := CommunicateWithUAP(ctx, "endpoint", "channel", func(context.Context, *gpb.GuestActionRequest, *ipb.CloudProperties) *gpb.GuestActionResponse {
+			got := CommunicateWithUAP(ctx, "endpoint", "channel", func(context.Context, *gpb.GuestActionRequest, *metadataserver.CloudProperties) *gpb.GuestActionResponse {
 				return nil
 			}, nil)
 			if got == nil {

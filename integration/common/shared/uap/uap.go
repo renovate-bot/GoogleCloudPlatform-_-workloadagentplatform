@@ -19,6 +19,7 @@ package uap
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -26,12 +27,12 @@ import (
 	"github.com/cenkalti/backoff/v4"
 	"google.golang.org/api/option"
 	"google.golang.org/protobuf/encoding/prototext"
+	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/gce/metadataserver"
 	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/log"
 
 	anypb "google.golang.org/protobuf/types/known/anypb"
 	acpb "github.com/GoogleCloudPlatform/agentcommunication_client/gapic/agentcommunicationpb"
 	gpb "github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/protos/guestactions"
-	ipb "github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/protos/instanceinfo"
 )
 
 const (
@@ -41,7 +42,7 @@ const (
 
 type (
 	// MessageHandlerFunc is the function that the agent will use to handle incoming messages.
-	MessageHandlerFunc func(context.Context, *gpb.GuestActionRequest, *ipb.CloudProperties) *gpb.GuestActionResponse
+	MessageHandlerFunc func(context.Context, *gpb.GuestActionRequest, *metadataserver.CloudProperties) *gpb.GuestActionResponse
 )
 
 var sendMessage = func(c *client.Connection, msg *acpb.MessageBody) error {
@@ -128,7 +129,7 @@ func parseRequest(ctx context.Context, msg *anypb.Any) (*gpb.GuestActionRequest,
 	gaReq := &gpb.GuestActionRequest{}
 	if err := msg.UnmarshalTo(gaReq); err != nil {
 		errMsg := fmt.Sprintf("failed to unmarshal message: %v", err)
-		return nil, fmt.Errorf(errMsg)
+		return nil, errors.New(errMsg)
 	}
 	log.CtxLogger(ctx).Debugw("successfully unmarshalled message.", "gar", prototext.Format(gaReq))
 	return gaReq, nil
@@ -139,7 +140,7 @@ func parseRequest(ctx context.Context, msg *anypb.Any) (*gpb.GuestActionRequest,
 // "channel" is the registered channel name to be used for communication
 // between the agent and the service provider.
 // "messageHandler" is the function that the agent will use to handle incoming messages.
-func CommunicateWithUAP(ctx context.Context, endpoint string, channel string, messageHandler MessageHandlerFunc, cloudProperties *ipb.CloudProperties) error {
+func CommunicateWithUAP(ctx context.Context, endpoint string, channel string, messageHandler MessageHandlerFunc, cloudProperties *metadataserver.CloudProperties) error {
 	eBackoff := setupBackoff()
 	conn := establishConnection(ctx, endpoint, channel)
 	for conn == nil {

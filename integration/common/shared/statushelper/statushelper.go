@@ -243,13 +243,23 @@ func printState(ctx context.Context, name string, state spb.State) {
 // appropriate formatting and coloring.
 func printServiceStatus(ctx context.Context, status *spb.ServiceStatus) {
 	printColor(info, "--------------------------------------------------------------------------------\n")
-	if !status.GetEnabled() {
+	switch status.GetState() {
+	case spb.State_UNSPECIFIED_STATE:
+		printColor(faint, "%s: %s\n", status.GetName(), status.GetEnabledUnspecifiedMessage())
+		return
+	case spb.State_FAILURE_STATE:
 		printColor(faint, "%s: Disabled\n", status.GetName())
 		return
+	case spb.State_ERROR_STATE:
+		if status.GetErrorMessage() == "" {
+			status.ErrorMessage = "could not determine status"
+		}
+		printColor(failure, "%s: Error: %s\n", status.GetName(), status.GetErrorMessage())
+		return
+	default:
+		printColor(info, "%s: ", status.GetName())
+		printColor(success, "Enabled\n")
 	}
-	printColor(info, "%s: ", status.GetName())
-	printColor(success, "Enabled\n")
-
 	printColor(info, "    Status: ")
 	if status.GetFullyFunctional() == spb.State_SUCCESS_STATE {
 		printColor(success, "Fully Functional\n")
@@ -286,6 +296,9 @@ func printServiceStatus(ctx context.Context, status *spb.ServiceStatus) {
 
 	if len(status.GetConfigValues()) > 0 {
 		printColor(info, "    Configuration:\n")
+		sort.Slice(status.GetConfigValues(), func(i, j int) bool {
+			return status.GetConfigValues()[i].GetName() < status.GetConfigValues()[j].GetName()
+		})
 	}
 	for _, configValue := range status.GetConfigValues() {
 		defaultString := "default"
