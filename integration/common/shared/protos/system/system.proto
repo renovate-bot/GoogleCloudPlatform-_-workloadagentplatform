@@ -282,9 +282,21 @@ message SapDiscovery {
     // An empty list indicates the component is not configured for HA.
     repeated string ha_hosts = 7;
 
+    // A replication site used in Disaster Recovery (DR) configurations.
+    message ReplicationSite {
+      // The name of the source site from which this one replicates.
+      string source_site = 1;
+
+      // The system component for the site.
+      Component component = 2;
+    }
+
     // A list of replication sites used in Disaster Recovery (DR)
     // configurations.
-    repeated Component replication_sites = 8;
+    repeated ReplicationSite replication_sites = 8;
+
+    // The region this component's resources are primarily located in.
+    string region = 9;
   }
 
   // A set of properties describing an SAP workload.
