@@ -401,9 +401,10 @@ func TestAgentEnabledAndRunningLinux(t *testing.T) {
 
 func TestPrintStatus(t *testing.T) {
 	tests := []struct {
-		name   string
-		status *spb.AgentStatus
-		want   string
+		name    string
+		status  *spb.AgentStatus
+		compact bool
+		want    string
 	}{
 		{
 			name:   "emptyStatus",
@@ -526,6 +527,114 @@ Host Metrics: Enabled
     Status: Fully Functional
     Configuration:
         Hello: World (default)
+--------------------------------------------------------------------------------
+Backint: Disabled
+--------------------------------------------------------------------------------
+References:
+IAM Permissions: https://cloud.google.com/solutions/sap/docs/agent-for-sap/latest/planning#required_iam_roles
+What's New: https://cloud.google.com/solutions/sap/docs/agent-for-sap/whats-new
+
+
+`,
+		},
+		{
+			name:    "fullStatusAllSuccessQuiet",
+			compact: true,
+			status: &spb.AgentStatus{
+				AgentName:                       "Agent for SAP",
+				InstalledVersion:                "3.6",
+				AvailableVersion:                "3.6",
+				SystemdServiceEnabled:           spb.State_SUCCESS_STATE,
+				SystemdServiceRunning:           spb.State_SUCCESS_STATE,
+				ConfigurationFilePath:           "/etc/google-cloud-sap-agent/configuration.json",
+				ConfigurationValid:              spb.State_SUCCESS_STATE,
+				ConfigurationErrorMessage:       "error: proto: (line 6:44): invalid value for bool field value: 2",
+				CloudApiAccessFullScopesGranted: spb.State_SUCCESS_STATE,
+				Services: []*spb.ServiceStatus{
+					{
+						Name:            "Process Metrics",
+						State:           spb.State_SUCCESS_STATE,
+						FullyFunctional: spb.State_SUCCESS_STATE,
+						ErrorMessage:    "Cannot write to Cloud Monitoring, check IAM permissions",
+						IamPermissions: []*spb.IAMPermission{
+							{
+								Name:    "example.compute.viewer",
+								Granted: spb.State_SUCCESS_STATE,
+							},
+							{
+								Name:    "example.monitoring.viewer",
+								Granted: spb.State_SUCCESS_STATE,
+							},
+						},
+						ConfigValues: []*spb.ConfigValue{
+							{
+								Name:      "collect_process_metrics",
+								Value:     "True",
+								IsDefault: true,
+							},
+							{
+								Name:      "process_metrics_frequency",
+								Value:     "5",
+								IsDefault: true,
+							},
+						},
+					},
+					{
+						Name:            "Host Metrics",
+						State:           spb.State_SUCCESS_STATE,
+						FullyFunctional: spb.State_SUCCESS_STATE,
+						ErrorMessage:    "Cannot write to Cloud Monitoring, check IAM permissions",
+						ConfigValues: []*spb.ConfigValue{
+							{
+								Name:      "Hello",
+								Value:     "World",
+								IsDefault: true,
+							},
+						},
+					},
+					{
+						Name:            "Backint",
+						State:           spb.State_FAILURE_STATE,
+						FullyFunctional: spb.State_FAILURE_STATE,
+						ErrorMessage:    "Cannot write to Cloud Monitoring, check IAM permissions",
+						ConfigValues: []*spb.ConfigValue{
+							{
+								Name:      "fake_config",
+								Value:     "5",
+								IsDefault: true,
+							},
+						},
+					},
+				},
+				References: []*spb.Reference{
+					{
+						Name: "IAM Permissions",
+						Url:  "https://cloud.google.com/solutions/sap/docs/agent-for-sap/latest/planning#required_iam_roles",
+					},
+					{
+						Name: "What's New",
+						Url:  "https://cloud.google.com/solutions/sap/docs/agent-for-sap/whats-new",
+					},
+				},
+			},
+			want: `--------------------------------------------------------------------------------
+|                             Agent for SAP Status                             |
+--------------------------------------------------------------------------------
+Agent Status:
+    Installed Version: 3.6
+    Available Version: 3.6
+    Systemd Service Enabled: True
+    Systemd Service Running: True
+    Cloud API Full Scopes:   True
+    Configuration File: /etc/google-cloud-sap-agent/configuration.json
+    Configuration Valid: True
+--------------------------------------------------------------------------------
+Process Metrics: Enabled
+    Status: Fully Functional
+    IAM Permissions: All granted
+--------------------------------------------------------------------------------
+Host Metrics: Enabled
+    Status: Fully Functional
 --------------------------------------------------------------------------------
 Backint: Disabled
 --------------------------------------------------------------------------------
@@ -662,7 +771,7 @@ What's New: https://cloud.google.com/solutions/sap/docs/agent-for-sap/whats-new
 			}(tabWriter)
 			r, w, _ := os.Pipe()
 			tabWriter = tabwriter.NewWriter(w, 0, 0, 1, ' ', 0)
-			PrintStatus(context.Background(), tc.status)
+			PrintStatus(context.Background(), tc.status, tc.compact)
 
 			w.Close()
 			var buf bytes.Buffer

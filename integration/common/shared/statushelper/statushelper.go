@@ -197,7 +197,7 @@ func packageVersionWindows(ctx context.Context, packageName string, repoName str
 
 // PrintStatus prints the status of the agent and the configured services to
 // the console with appropriate formatting and coloring.
-func PrintStatus(ctx context.Context, status *spb.AgentStatus) {
+func PrintStatus(ctx context.Context, status *spb.AgentStatus, compact bool) {
 	// Center the agent name between the header dashes and limit the width to 80 characters.
 	printColor(info, "--------------------------------------------------------------------------------\n")
 	printColor(info, "|%s|\n", fmt.Sprintf("%*s", -78, fmt.Sprintf("%*s", (78+len(status.GetAgentName()+" Status"))/2, status.GetAgentName()+" Status")))
@@ -222,7 +222,7 @@ func PrintStatus(ctx context.Context, status *spb.AgentStatus) {
 	}
 
 	for _, service := range status.GetServices() {
-		printServiceStatus(ctx, service)
+		printServiceStatus(ctx, service, compact)
 	}
 	printReferences(ctx, status.GetReferences())
 	printColor(info, "\n\n")
@@ -244,7 +244,7 @@ func printState(ctx context.Context, name string, state spb.State) {
 
 // printServiceStatus prints the status of the service to the console with
 // appropriate formatting and coloring.
-func printServiceStatus(ctx context.Context, status *spb.ServiceStatus) {
+func printServiceStatus(ctx context.Context, status *spb.ServiceStatus, compact bool) {
 	printColor(info, "--------------------------------------------------------------------------------\n")
 	switch status.GetState() {
 	case spb.State_UNSPECIFIED_STATE:
@@ -287,15 +287,20 @@ func printServiceStatus(ctx context.Context, status *spb.ServiceStatus) {
 		} else {
 			printColor(failure, "%d not granted (output limited to 5)\n", len(deniedPermissions))
 		}
-		sort.Slice(deniedPermissions, func(i, j int) bool {
-			return deniedPermissions[i].GetGranted() < deniedPermissions[j].GetGranted()
-		})
-		for i, permission := range deniedPermissions {
-			if i >= 5 {
-				break
+		if !compact {
+			sort.Slice(deniedPermissions, func(i, j int) bool {
+				return deniedPermissions[i].GetGranted() < deniedPermissions[j].GetGranted()
+			})
+			for i, permission := range deniedPermissions {
+				if i >= 5 {
+					break
+				}
+				printState(ctx, fmt.Sprintf("        %s", permission.GetName()), permission.GetGranted())
 			}
-			printState(ctx, fmt.Sprintf("        %s", permission.GetName()), permission.GetGranted())
 		}
+	}
+	if compact {
+		return
 	}
 
 	if len(status.GetConfigValues()) > 0 {
