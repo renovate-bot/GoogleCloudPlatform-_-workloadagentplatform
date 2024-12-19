@@ -61,6 +61,7 @@ var (
 		},
 		"workload.googleapis.com/sap/hana/ha/replication": map[string]zapcore.Level{
 			"0":  zapcore.ErrorLevel,
+			"2":  zapcore.ErrorLevel,
 			"11": zapcore.ErrorLevel,
 			"12": zapcore.ErrorLevel,
 			"14": zapcore.WarnLevel,
