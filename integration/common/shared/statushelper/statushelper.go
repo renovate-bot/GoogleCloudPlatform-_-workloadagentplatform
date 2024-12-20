@@ -141,8 +141,19 @@ func agentEnabledAndRunningLinux(ctx context.Context, serviceName string, exec c
 //
 // Returns tuple of (isEnabled, isRunning, error)
 func agentEnabledAndRunningWindows(ctx context.Context, serviceName string, exec commandlineexecutor.Execute) (isEnabled bool, isRunning bool, err error) {
-	// TODO: Implement service status check for windows.
-	return false, false, fmt.Errorf("agentEnabledAndRunningWindows is not yet implemented")
+	// Check if the service is running. Enabled is considered to be the same as running on windows.
+	result := exec(ctx, commandlineexecutor.Params{
+		Executable:  "Powershell",
+		ArgsToSplit: fmt.Sprintf("(Get-Service -Name '%s' -ErrorAction Ignore).Status", serviceName),
+	})
+	stdOut := strings.TrimSpace(result.StdOut)
+	if stdOut == "Running" {
+		return true, true, nil
+	}
+	if stdOut == "Stopped" {
+		return false, false, nil
+	}
+	return false, false, fmt.Errorf("could not get the agent service status: %#v", result)
 }
 
 // CheckIAMRoles checks if the required IAM roles are present.
@@ -191,8 +202,19 @@ func packageVersionLinux(ctx context.Context, packageName string, repoName strin
 // packageVersionWindows returns the latest version of the agent package
 // available on the windows OS's package manager.
 func packageVersionWindows(ctx context.Context, packageName string, repoName string, exec commandlineexecutor.Execute, exists commandlineexecutor.Exists) (string, error) {
-	// TODO: Implement service status check for windows
-	return "", fmt.Errorf("packageVersionWindows is not yet implemented")
+	result := exec(ctx, commandlineexecutor.Params{
+		Executable:  "Powershell",
+		ArgsToSplit: "googet latest google-cloud-sap-agent",
+	})
+
+	stdOut := strings.TrimSpace(result.StdOut)
+	if result.Error != nil || stdOut == "" {
+		return "", fmt.Errorf("failed to fetch latest version: %#v", result)
+	}
+
+	// The output of the command is of the form "3.6@684522709" (version@somenumber), we want to align
+	// with the version format of the agent from linux.
+	return strings.Replace(stdOut, "@", "-", 1), nil
 }
 
 // PrintStatus prints the status of the agent and the configured services to

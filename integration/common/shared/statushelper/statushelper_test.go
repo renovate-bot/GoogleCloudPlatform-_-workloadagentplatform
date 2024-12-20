@@ -91,6 +91,17 @@ func TestFetchLatestVersion(t *testing.T) {
 			wantErr: cmpopts.AnyError,
 		},
 		{
+			name:        "WindowsSuccess",
+			packageName: "foo",
+			repoName:    "repo",
+			osType:      "windows",
+			fakeCommand: "googet",
+			fakeRes: commandlineexecutor.Result{
+				StdOut: "3.5@671008012 ",
+			},
+			wantLatest: "3.5-671008012",
+		},
+		{
 			name:        "WindowsFailure",
 			packageName: "foo",
 			repoName:    "repo",
@@ -98,7 +109,7 @@ func TestFetchLatestVersion(t *testing.T) {
 			fakeCommand: "googet",
 			fakeRes: commandlineexecutor.Result{
 				ExitCode: 1,
-				Error:    fmt.Errorf("could not refresh repositories"),
+				Error:    fmt.Errorf("could not fetch latest version of package"),
 			},
 			wantErr: cmpopts.AnyError,
 		},
@@ -198,6 +209,53 @@ func TestPackageVersionLinux(t *testing.T) {
 	}
 }
 
+func TestPackageVersionWindows(t *testing.T) {
+	tests := []struct {
+		name        string
+		packageName string
+		repoName    string
+		fakeCommand string
+		fakeRes     commandlineexecutor.Result
+		wantLatest  string
+		wantErr     error
+	}{
+		{
+			name:        "GoogetSuccess",
+			packageName: "foo",
+			repoName:    "repo",
+			fakeCommand: "googet",
+			fakeRes: commandlineexecutor.Result{
+				StdOut: "3.6@684522709 ",
+			},
+			wantLatest: "3.6-684522709",
+		},
+		{
+			name:        "GoogetFailure",
+			packageName: "foo",
+			repoName:    "repo",
+			fakeCommand: "googet",
+			fakeRes: commandlineexecutor.Result{
+				ExitCode: 1,
+				Error:    fmt.Errorf("could not fetch latest version of package"),
+			},
+			wantErr: cmpopts.AnyError,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			exec := &fakeExecutor{fakeCommandRes: map[string]commandlineexecutor.Result{test.fakeCommand: test.fakeRes}}
+			gotLatest, gotErr := packageVersionWindows(context.Background(), test.packageName, test.repoName, exec.ExecuteCommand, exec.CommandExists)
+			if !cmp.Equal(gotErr, test.wantErr, cmpopts.EquateErrors()) {
+				t.Errorf("packageVersionWindows(%s, %s) returned err: %v, wantErr: %v", test.packageName, test.repoName, gotErr, test.wantErr)
+			}
+			if diff := cmp.Diff(test.wantLatest, gotLatest); diff != "" {
+				t.Errorf("packageVersionWindows(%s, %s) returned unexpected diff (-want +got):\n%s", test.packageName, test.repoName, diff)
+			}
+		})
+	}
+}
+
 func TestCheckAgentEnabledAndRunning(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -234,10 +292,28 @@ func TestCheckAgentEnabledAndRunning(t *testing.T) {
 			wantErr: cmpopts.AnyError,
 		},
 		{
-			name:      "WindowsFailure",
-			agentName: "foo",
-			osType:    "windows",
-			wantErr:   cmpopts.AnyError,
+			name:        "WindowsSuccess",
+			agentName:   "foo",
+			osType:      "windows",
+			fakeCommand: "Get-Service",
+			fakeRes: commandlineexecutor.Result{
+				StdOut:   "Running",
+				ExitCode: 0,
+			},
+			wantEnabled: true,
+			wantRunning: true,
+		},
+		{
+			name:        "WindowsFailure",
+			agentName:   "foo",
+			osType:      "windows",
+			fakeCommand: "Get-Service",
+			fakeRes: commandlineexecutor.Result{
+				ExitCode: 1,
+				StdErr:   "could not get service status",
+				Error:    fmt.Errorf("could not get service status"),
+			},
+			wantErr: cmpopts.AnyError,
 		},
 		{
 			name:      "UnsupportedOS",
@@ -394,6 +470,86 @@ func TestAgentEnabledAndRunningLinux(t *testing.T) {
 			}
 			if diff := cmp.Diff(test.wantRunning, gotRunning); diff != "" {
 				t.Errorf("agentEnabledAndRunningLinux(%s) returned unexpected running status diff (-want +got):\n%s", test.serviceName, diff)
+			}
+		})
+	}
+}
+
+func TestAgentEnabledAndRunningWindows(t *testing.T) {
+	tests := []struct {
+		name        string
+		serviceName string
+		fakeCommand map[string]commandlineexecutor.Result
+		wantEnabled bool
+		wantRunning bool
+		wantErr     error
+	}{
+		{
+			name:        "ServiceRunning",
+			serviceName: "foo",
+			fakeCommand: map[string]commandlineexecutor.Result{
+				"Get-Service": commandlineexecutor.Result{
+					StdOut:   " Running ",
+					ExitCode: 0,
+				},
+			},
+			wantEnabled: true,
+			wantRunning: true,
+		},
+		{
+			name:        "ServiceStopped",
+			serviceName: "foo",
+			fakeCommand: map[string]commandlineexecutor.Result{
+				"Get-Service": commandlineexecutor.Result{
+					StdOut:   " Stopped ",
+					ExitCode: 0,
+				},
+			},
+			wantEnabled: false,
+			wantRunning: false,
+		},
+		{
+			name:        "ServiceNotStoppedOrRunning",
+			serviceName: "foo",
+			fakeCommand: map[string]commandlineexecutor.Result{
+				"Get-Service": commandlineexecutor.Result{
+					StdOut:   "",
+					ExitCode: 0,
+				},
+			},
+			wantEnabled: false,
+			wantRunning: false,
+			wantErr:     cmpopts.AnyError,
+		},
+		{
+			name:        "ErrorCheckingEnabledStatus",
+			serviceName: "foo",
+			fakeCommand: map[string]commandlineexecutor.Result{
+				"Get-Service": commandlineexecutor.Result{
+					StdErr: "error checking running status",
+					Error:  fmt.Errorf("error checking running status"),
+				},
+			},
+			wantEnabled: false,
+			wantRunning: false,
+			wantErr:     cmpopts.AnyError,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			exec := &fakeExecutor{
+				fakeCommandRes: test.fakeCommand,
+			}
+			gotEnabled, gotRunning, err := agentEnabledAndRunningWindows(context.Background(), test.serviceName, exec.ExecuteCommand)
+			if !cmp.Equal(err, test.wantErr, cmpopts.EquateErrors()) {
+				t.Errorf("agentEnabledAndRunningWindows(%s) returned err: %v, wantErr: %v", test.serviceName, err, test.wantErr)
+			}
+			if diff := cmp.Diff(test.wantEnabled, gotEnabled); diff != "" {
+				t.Errorf("agentEnabledAndRunningWindows(%s) returned unexpected enabled status diff (-want +got):\n%s", test.serviceName, diff)
+			}
+			if diff := cmp.Diff(test.wantRunning, gotRunning); diff != "" {
+				t.Errorf("agentEnabledAndRunningWindows(%s) returned unexpected running status diff (-want +got):\n%s", test.serviceName, diff)
 			}
 		})
 	}
