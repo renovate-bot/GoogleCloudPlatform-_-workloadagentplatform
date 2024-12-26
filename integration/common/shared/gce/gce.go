@@ -376,6 +376,23 @@ func (g *GCE) AttachDisk(ctx context.Context, diskName string, cp *metadataserve
 	return nil
 }
 
+// AttachDiskWithInstanceName attaches the disk with the given name to the instance.
+func (g *GCE) AttachDiskWithInstanceName(ctx context.Context, diskName string, instanceName, project, dataDiskZone string) error {
+	log.CtxLogger(ctx).Infow("Attaching disk", "diskName", diskName)
+	attachDiskToVM := &compute.AttachedDisk{
+		DeviceName: diskName, // Keep the device name and disk name same.
+		Source:     fmt.Sprintf("projects/%s/zones/%s/disks/%s", project, dataDiskZone, diskName),
+	}
+	op, err := g.service.Instances.AttachDisk(project, dataDiskZone, instanceName, attachDiskToVM).Do()
+	if err != nil {
+		return fmt.Errorf("failed to attach disk: %v", err)
+	}
+	if err := g.WaitForDiskOpCompletionWithRetry(ctx, op, project, dataDiskZone); err != nil {
+		return fmt.Errorf("attach disk operation failed: %v", err)
+	}
+	return nil
+}
+
 // DetachDisk detaches given disk from the instance.
 func (g *GCE) DetachDisk(ctx context.Context, cp *metadataserver.CloudProperties, project, dataDiskZone, dataDiskName, dataDiskDeviceName string) error {
 	log.CtxLogger(ctx).Infow("Detatching disk", "diskName", dataDiskName, "deviceName", dataDiskDeviceName)
@@ -388,6 +405,27 @@ func (g *GCE) DetachDisk(ctx context.Context, cp *metadataserver.CloudProperties
 	}
 
 	_, ok, err := g.DiskAttachedToInstance(project, dataDiskZone, cp.InstanceName, dataDiskName)
+	if err != nil {
+		return fmt.Errorf("failed to check if disk %v is still attached to the instance", dataDiskName)
+	}
+	if ok {
+		return fmt.Errorf("Disk %v is still attached to the instance", dataDiskName)
+	}
+	return nil
+}
+
+// DetachDiskWithInstanceName detaches given disk from the instance.
+func (g *GCE) DetachDiskWithInstanceName(ctx context.Context, instanceName, project, dataDiskZone, dataDiskName, dataDiskDeviceName string) error {
+	log.CtxLogger(ctx).Infow("Detatching disk", "diskName", dataDiskName, "deviceName", dataDiskDeviceName)
+	op, err := g.service.Instances.DetachDisk(project, dataDiskZone, instanceName, dataDiskDeviceName).Do()
+	if err != nil {
+		return fmt.Errorf("failed to detach old data disk: %v", err)
+	}
+	if err := g.WaitForDiskOpCompletionWithRetry(ctx, op, project, dataDiskZone); err != nil {
+		return fmt.Errorf("detach data disk operation failed: %v", err)
+	}
+
+	_, ok, err := g.DiskAttachedToInstance(project, dataDiskZone, instanceName, dataDiskName)
 	if err != nil {
 		return fmt.Errorf("failed to check if disk %v is still attached to the instance", dataDiskName)
 	}
