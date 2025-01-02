@@ -375,18 +375,8 @@ func (g *TestGCE) AttachDisk(ctx context.Context, diskName string, instanceName,
 	return g.AttachDiskErr
 }
 
-// AttachDiskWithInstanceName fakes calls to the cloud APIs to attach a disk to an instance.
-func (g *TestGCE) AttachDiskWithInstanceName(ctx context.Context, diskName, instanceName, project, dataDiskZone string) error {
-	return g.AttachDiskErr
-}
-
 // DetachDisk fakes calls to the cloud APIs to detach a disk from an instance.
 func (g *TestGCE) DetachDisk(ctx context.Context, instanceName, project, dataDiskZone, dataDiskName, dataDiskDeviceName string) error {
-	return g.DetachDiskErr
-}
-
-// DetachDiskWithInstanceName fakes calls to the cloud APIs to detach a disk from an instance.
-func (g *TestGCE) DetachDiskWithInstanceName(ctx context.Context, instanceName, project, dataDiskZone, dataDiskName, dataDiskDeviceName string) error {
 	return g.DetachDiskErr
 }
 
