@@ -20,9 +20,10 @@ try {
     Disable-ScheduledTask $MONITOR_TASK
     Unregister-ScheduledTask -TaskName $MONITOR_TASK -Confirm:$false
   }
-  if ($(Get-Service -Name $SVC_NAME -ErrorAction Ignore).Status) {
+  if ($(Get-Service -Name $SVC_NAME -ErrorAction SilentlyContinue).Length -gt 0) {
     Stop-Service $SVC_NAME
     Remove-CimInstance -InputObject $(Get-CimInstance -ClassName Win32_Service -Filter "Name='google-cloud-example-agent'")
+    sc.exe delete $SVC_NAME
   }
 
   # remove the agent directory
