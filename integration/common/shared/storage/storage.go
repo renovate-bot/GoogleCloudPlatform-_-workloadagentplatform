@@ -95,6 +95,13 @@ type ReadWriter struct {
 	// CustomTime is an optional parameter to set the custom time for uploads.
 	CustomTime time.Time
 
+	// ObjectRetentionMode is an optional parameter to set the object retention mode for uploads.
+	// Accepted values are "Locked" or "Unlocked".
+	ObjectRetentionMode string
+
+	// ObjectRetentionTime is an optional parameter to set the object retention time for uploads.
+	ObjectRetentionTime time.Time
+
 	// If TotalBytes is not set, percent completion cannot be calculated when logging progress.
 	TotalBytes int64
 
@@ -281,6 +288,13 @@ func (rw *ReadWriter) Upload(ctx context.Context) (int64, error) {
 		}
 		if rw.StorageClass != "" {
 			objectWriter.ObjectAttrs.StorageClass = rw.StorageClass
+		}
+		if rw.ObjectRetentionMode != "" {
+			objectWriter.ObjectAttrs.Retention = &storage.ObjectRetention{
+				Mode:        rw.ObjectRetentionMode,
+				RetainUntil: rw.ObjectRetentionTime,
+			}
+			log.CtxLogger(ctx).Infow("ObjectRetention set for upload", "bucket", rw.BucketName, "object", rw.ObjectName, "retentionMode", rw.ObjectRetentionMode, "retentionTime", rw.ObjectRetentionTime)
 		}
 		// Set an individual chunk retry deadline to 10 minutes.
 		// Note, even with custom retries declared this value must also be set.

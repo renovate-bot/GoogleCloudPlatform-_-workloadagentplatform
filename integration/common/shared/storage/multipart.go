@@ -102,6 +102,8 @@ type MultipartWriter struct {
 	currentWorker *uploadWorker
 	idleWorkers   chan *uploadWorker
 	customTime    time.Time
+	retentionMode string
+	retentionTime time.Time
 }
 
 // uploadWorker will buffer and retry uploading a single part.
@@ -143,6 +145,8 @@ func (rw *ReadWriter) NewMultipartWriter(ctx context.Context, newClient HTTPClie
 		workers:                make([]*uploadWorker, rw.XMLMultipartWorkers),
 		idleWorkers:            make(chan *uploadWorker, rw.XMLMultipartWorkers),
 		customTime:             rw.CustomTime,
+		retentionMode:          rw.ObjectRetentionMode,
+		retentionTime:          rw.ObjectRetentionTime,
 	}
 	if w.uploadID, err = w.initMultipartUpload(); err != nil {
 		return nil, fmt.Errorf("failed to init multipart upload, err: %w", err)
@@ -287,6 +291,13 @@ func (w *MultipartWriter) completeMultipartUpload() error {
 		Metadata:   map[string]string{"X-Backup-Type": w.fileType},
 		CustomTime: w.customTime,
 	}
+	if w.retentionMode != "" {
+		update.Retention = &storage.ObjectRetention{
+			Mode:        w.retentionMode,
+			RetainUntil: w.retentionTime,
+		}
+	}
+	log.Logger.Infow("Updating object attrs", "object", w.objectName, "update", update)
 	if _, err := w.bucket.Object(w.objectName).Update(req.Context(), update); err != nil {
 		return err
 	}
