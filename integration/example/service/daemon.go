@@ -138,7 +138,9 @@ func (d *Daemon) daemonHandler(ctx context.Context, cancel context.CancelFunc) e
 	d.applyConfigurationDefaults()
 	d.lp.LogToCloud = d.config.GetLogToCloud().GetValue()
 	d.lp.Level = common.LogLevelToZapcore(d.config.GetLogLevel().Number())
-	d.lp.CloudLoggingClient = log.CloudLoggingClient(ctx, d.config.GetCloudProperties().GetProjectId())
+	if d.config.GetCloudProperties().GetProjectId() != "" {
+		d.lp.CloudLoggingClient = log.CloudLoggingClient(ctx, d.config.GetCloudProperties().GetProjectId())
+	}
 	if d.lp.CloudLoggingClient != nil {
 		defer d.lp.CloudLoggingClient.Close()
 	}
