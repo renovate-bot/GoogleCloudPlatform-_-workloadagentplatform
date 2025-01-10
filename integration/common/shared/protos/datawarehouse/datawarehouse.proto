@@ -54,6 +54,9 @@ message Insight {
 
   // The instance id where the insight is generated from
   string instance_id = 5;
+
+  // The insights data for workload validation of torso workloads.
+  TorsoValidation torso_validation = 6;
 }
 
 // A presentation of SAP workload insight.
