@@ -325,4 +325,6 @@ message SapDiscovery {
     // system.
     repeated SoftwareComponentProperties software_component_versions = 2;
   }
+  // Whether to use DR reconciliation or not.
+  bool use_dr_reconciliation = 8;
 }
