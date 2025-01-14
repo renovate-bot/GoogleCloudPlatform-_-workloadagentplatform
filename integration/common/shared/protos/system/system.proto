@@ -236,6 +236,12 @@ message SapDiscovery {
         MAXDB = 2;
         // IBM DB2
         DB2 = 3;
+        // Oracle Database
+        ORACLE = 4;
+        // Microsoft SQL Server
+        SQLSERVER = 5;
+        // SAP Sybase ASE
+        ASE = 6;
       }
       // Type of the database. HANA, DB2, etc.
       DatabaseType database_type = 1;
