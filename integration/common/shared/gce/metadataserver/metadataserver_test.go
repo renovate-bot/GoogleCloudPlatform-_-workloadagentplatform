@@ -434,3 +434,50 @@ window_start_time 2024-07-29T14:19:57+00:00`
 		}
 	}
 }
+
+func TestRegionFromZone(t *testing.T) {
+	tests := []struct {
+		name string
+		zone string
+		want string
+	}{
+		{
+			name: "us-central1-a",
+			zone: "us-central1-a",
+			want: "us-central1",
+		},
+		{
+			name: "us-central1-b",
+			zone: "us-central1-b",
+			want: "us-central1",
+		},
+		{
+			name: "us-central1-foo",
+			zone: "us-central1-foo",
+			want: "us-central1",
+		},
+		{
+			name: "us-central1-foo-bar",
+			zone: "us-central1-foo-bar",
+			want: "us-central1",
+		},
+		{
+			name: "us-central1",
+			zone: "us-central1",
+			want: "us-central1",
+		},
+		{
+			name: "empty",
+			zone: "",
+			want: "",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := regionFromZone(test.zone)
+			if got != test.want {
+				t.Errorf("regionFromZone(%s) = %s, want %s", test.zone, got, test.want)
+			}
+		})
+	}
+}

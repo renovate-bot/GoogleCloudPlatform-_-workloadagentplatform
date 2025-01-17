@@ -29,6 +29,7 @@ import (
 	"net/url"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
@@ -216,12 +217,14 @@ func requestProperties() (*CloudProperties, error) {
 	if projectID == "" || numericProjectID == "0" || instanceID == "0" || zone == "" || instanceName == "" {
 		return nil, fmt.Errorf("metadata server responded with incomplete information")
 	}
+	region := regionFromZone(zone)
 
 	return &CloudProperties{
 		ProjectID:        projectID,
 		NumericProjectID: numericProjectID,
 		InstanceID:       instanceID,
 		Zone:             zone,
+		Region:           region,
 		InstanceName:     instanceName,
 		Image:            image,
 		MachineType:      machineType,
@@ -252,6 +255,14 @@ func parseZone(raw string) string {
 		zone = match[1]
 	}
 	return zone
+}
+
+func regionFromZone(zone string) string {
+	regionParts := strings.Split(zone, "-")
+	if len(regionParts) < 2 {
+		return ""
+	}
+	return strings.Join(regionParts[:2], "-")
 }
 
 // parseMachineType retrieves the machine type from the response.
