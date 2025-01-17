@@ -44,7 +44,7 @@ const (
 
 // WLM is a wrapper for Workload Manager API services.
 type WLM struct {
-	service *DataWarehouseService
+	Service *DataWarehouseService
 }
 
 // NewWLMClient creates a new WLM service wrapper.
@@ -59,8 +59,8 @@ func NewWLMClient(ctx context.Context, basePath string) (*WLM, error) {
 
 // WriteInsight wraps a call to the WLM insights:write API.
 func (w *WLM) WriteInsight(project string, location string, writeInsightRequest *dwpb.WriteInsightRequest) error {
-	res, err := w.service.WriteInsight(project, location, writeInsightRequest)
-	log.Logger.Debugw("WriteInsight response", "res", res, "err", err)
+	res, err := w.Service.WriteInsight(project, location, writeInsightRequest)
+	log.Logger.Debugw("WriteInsight response", "res", res, "StatusCode", res.HTTPStatusCode, "err", err)
 	return err
 }
 
