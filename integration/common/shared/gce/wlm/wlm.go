@@ -60,7 +60,7 @@ func NewWLMClient(ctx context.Context, basePath string) (*WLM, error) {
 // WriteInsight wraps a call to the WLM insights:write API.
 func (w *WLM) WriteInsight(project string, location string, writeInsightRequest *dwpb.WriteInsightRequest) error {
 	res, err := w.Service.WriteInsight(project, location, writeInsightRequest)
-	log.Logger.Debugw("WriteInsight response", "res", res, "StatusCode", res.HTTPStatusCode, "err", err)
+	log.Logger.Debugw("WriteInsight response", "res", res, "err", err)
 	return err
 }
 
