@@ -23,12 +23,14 @@ jobs:
       run: |
         export PATH=${PATH}:`go env GOPATH`/bin
         protoc --go_opt=paths=source_relative integration/common/shared/protos/**/*.proto --go_out=.
+        protoc --go_opt=paths=source_relative sharedprotos/**/*.proto --go_out=.
     - name: Commit the compiled protos
       run: |
         git config --global user.name 'Git bot'
         git config --global user.email 'bot@noreply.github.com'
         git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
         git add integration/common/shared/protos
+        git add sharedprotos
         git commit -m "Auto updated compiled protocol buffers" && git push || echo "No changes to commit"
     - name: Notify on failure
       if: ${{ failure() }}
