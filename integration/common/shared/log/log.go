@@ -220,8 +220,8 @@ func SetupLoggingForOTE(agentName, command string, params Parameters) Parameters
 	if params.LogFileName == "" {
 		params.LogFileName = OTEFilePath(agentName, command, params.OSType, params.LogFilePath)
 	}
-	fmt.Println("log file name: ", params.LogFileName)
-	os.Chmod(params.LogFileName, 0660)
+	fmt.Println("Saving logs to:", params.LogFileName)
+
 	SetupLogging(params)
 	os.Chmod(params.LogFileName, 0660)
 	return params
