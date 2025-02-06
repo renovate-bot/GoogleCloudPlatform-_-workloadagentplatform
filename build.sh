@@ -70,7 +70,6 @@ go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 echo "**************  Compiling protobufs"
 protoc --go_opt=paths=source_relative integration/common/protos/*.proto --go_out=.
 protoc --go_opt=paths=source_relative integration/example/protos/*.proto --go_out=.
-protoc --go_opt=paths=source_relative integration/common/shared/protos/**/*.proto --go_out=.
 protoc --go_opt=paths=source_relative sharedprotos/**/*.proto --go_out=.
 
 echo "**************  Builidiing the example agent"
