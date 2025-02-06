@@ -20,7 +20,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/log"
+	"github.com/GoogleCloudPlatform/workloadagentplatform/sharedlibraries/log"
 	pb "github.com/GoogleCloudPlatform/workloadagentplatform/integration/example/protos"
 	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/example/usagemetrics"
 )

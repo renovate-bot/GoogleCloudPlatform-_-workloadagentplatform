@@ -19,7 +19,7 @@ package persistentflags
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/log"
+	"github.com/GoogleCloudPlatform/workloadagentplatform/sharedlibraries/log"
 )
 
 // Persistent flags (defined at the root command level)

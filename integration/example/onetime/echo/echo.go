@@ -23,7 +23,7 @@ import (
 
 	"github.com/spf13/cobra"
 	cpb "github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/protos"
-	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/log"
+	"github.com/GoogleCloudPlatform/workloadagentplatform/sharedlibraries/log"
 	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/usagemetrics"
 	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/example/cmd/persistentflags"
 	actions "github.com/GoogleCloudPlatform/workloadagentplatform/integration/example/usagemetrics"

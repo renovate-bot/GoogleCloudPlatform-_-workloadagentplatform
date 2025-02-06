@@ -22,8 +22,8 @@ import (
 
 	"github.com/jonboulle/clockwork"
 	cpb "github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/protos"
-	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/log"
-	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/shared/usagemetrics"
+	"github.com/GoogleCloudPlatform/workloadagentplatform/sharedlibraries/log"
+	"github.com/GoogleCloudPlatform/workloadagentplatform/sharedlibraries/usagemetrics"
 )
 
 // The following status values are supported.
