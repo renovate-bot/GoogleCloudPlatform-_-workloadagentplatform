@@ -1,8 +1,6 @@
-module github.com/GoogleCloudPlatform/workloadagentplatform/integration/sharedlibraries
+module github.com/GoogleCloudPlatform/workloadagentplatform/sharedlibraries
 
 go 1.23
-
-replace github.com/GoogleCloudPlatform/workloadagentplatform/sharedlibraries v0.0.0 => ./
 
 require (
   cloud.google.com/go/iam v1.3.1
@@ -10,7 +8,6 @@ require (
   cloud.google.com/go/secretmanager v1.14.4
   cloud.google.com/go/storage v1.50.0
   github.com/GoogleCloudPlatform/agentcommunication_client v0.0.0-20250205191725-b138e4259bb9
-  github.com/GoogleCloudPlatform/workloadagentplatform/sharedlibraries v0.0.0
   github.com/GoogleCloudPlatform/workloadagentplatform/sharedprotos v0.0.0-20250204214646-64a35efe99db
   github.com/cenkalti/backoff/v4 v4.3.0
   github.com/fatih/color v1.18.0
