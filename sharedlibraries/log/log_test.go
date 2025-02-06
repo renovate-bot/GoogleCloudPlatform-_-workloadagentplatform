@@ -270,3 +270,32 @@ func TestOTEFilePath(t *testing.T) {
 		})
 	}
 }
+
+func TestCreateWindowsLogBasePath(t *testing.T) {
+	tests := []struct {
+		name              string
+		programDataEnvVar string
+		want              string
+	}{
+		{
+			name:              "ProgramData exists",
+			programDataEnvVar: `C:\ProgramData`,
+			want:              `C:\ProgramData`,
+		},
+		{
+			name:              "ProgramData empty",
+			programDataEnvVar: ``,
+			want:              `C:\Program Files`,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Setenv("PROGRAMDATA", test.programDataEnvVar)
+			defer t.Setenv("PROGRAMDATA", "")
+			got := CreateWindowsLogBasePath()
+			if got != test.want {
+				t.Errorf("CreateWindowsLogBasePath() = %s, want %s", got, test.want)
+			}
+		})
+	}
+}

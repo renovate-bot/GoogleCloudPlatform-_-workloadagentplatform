@@ -110,6 +110,15 @@ func init() {
 	loggerMap = make(map[string]*zap.SugaredLogger)
 }
 
+// CreateWindowsLogBasePath returns the base path to either the program data or files directory.
+func CreateWindowsLogBasePath() string {
+	windowsProgramDataPath, exists := os.LookupEnv("PROGRAMDATA")
+	if exists && windowsProgramDataPath != "" {
+		return windowsProgramDataPath
+	}
+	return `C:\Program Files`
+}
+
 // OTEFilePath returns the log file path for the OTE invoked depending if it is invoked internally
 // or via command line.
 func OTEFilePath(agentName string, oteName string, osType string, logFilePath string) string {
