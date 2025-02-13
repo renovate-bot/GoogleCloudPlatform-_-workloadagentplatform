@@ -249,23 +249,6 @@ func TestCommunicateWithUAP(t *testing.T) {
 			},
 		},
 		{
-			name: "parseBadRequest",
-			want: "failed to unmarshal message",
-			createConnection: func(ctx context.Context, channel string, regional bool, opts ...option.ClientOption) (*client.Connection, error) {
-				return &client.Connection{}, nil
-			},
-			sendMessage: func(c *client.Connection, msg *acpb.MessageBody) error {
-				return nil
-			},
-			receive: func(c *client.Connection) (*acpb.MessageBody, error) {
-				time.Sleep(5 * time.Second)
-				return &acpb.MessageBody{
-					Labels: map[string]string{"uap_message_type": "OPERATION_STATUS", "operation_id": "test operation_id", "state": succeeded},
-					Body:   &apb.Any{Value: []byte("bad request")},
-				}, nil
-			},
-		},
-		{
 			name: "sendMessageError",
 			want: "sendMessage error",
 			createConnection: func(ctx context.Context, channel string, regional bool, opts ...option.ClientOption) (*client.Connection, error) {
@@ -329,18 +312,18 @@ func TestCommunicateWithUAP(t *testing.T) {
 			receive = test.receive
 			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 			defer cancel()
-			got := CommunicateWithUAP(ctx, "endpoint", "channel", func(context.Context, *gpb.GuestActionRequest, *metadataserver.CloudProperties) *gpb.GuestActionResponse {
-				return nil
+			got := Communicate(ctx, "endpoint", "channel", func(context.Context, *apb.Any, *metadataserver.CloudProperties) (*apb.Any, error) {
+				return nil, nil
 			}, nil)
 			if got == nil {
 				if test.want != "" {
-					t.Errorf("CommunicateWithUAP() returned nil error, want error: %s", test.want)
+					t.Errorf("Communicate() returned nil error, want error: %s", test.want)
 				}
 				return
 			}
 			if test.want == "" {
 				if got.Error() != "" {
-					t.Errorf("CommunicateWithUAP() returned error: %s, want nil error", got.Error())
+					t.Errorf("Communicate() returned error: %s, want nil error", got.Error())
 				}
 				return
 			}
@@ -351,7 +334,7 @@ func TestCommunicateWithUAP(t *testing.T) {
 			}
 			// If the desired error substring is not present, give an error showing the diff.
 			if diff := cmp.Diff(test.want, gotStr, cmpopts.EquateErrors()); diff != "" {
-				t.Errorf("CommunicateWithUAP() returned diff (-want +got):\n%s", diff)
+				t.Errorf("Communicate() returned diff (-want +got):\n%s", diff)
 			}
 		})
 	}

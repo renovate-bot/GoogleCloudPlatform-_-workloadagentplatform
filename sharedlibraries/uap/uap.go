@@ -43,6 +43,8 @@ const (
 type (
 	// MessageHandlerFunc is the function that the agent will use to handle incoming messages.
 	MessageHandlerFunc func(context.Context, *gpb.GuestActionRequest, *metadataserver.CloudProperties) *gpb.GuestActionResponse
+	// MsgHandlerFunc is the function that the agent will use to handle incoming messages.
+	MsgHandlerFunc func(context.Context, *anypb.Any, *metadataserver.CloudProperties) (*anypb.Any, error)
 )
 
 var sendMessage = func(c *client.Connection, msg *acpb.MessageBody) error {
@@ -141,6 +143,22 @@ func parseRequest(ctx context.Context, msg *anypb.Any) (*gpb.GuestActionRequest,
 // between the agent and the service provider.
 // "messageHandler" is the function that the agent will use to handle incoming messages.
 func CommunicateWithUAP(ctx context.Context, endpoint string, channel string, messageHandler MessageHandlerFunc, cloudProperties *metadataserver.CloudProperties) error {
+	return Communicate(ctx, endpoint, channel, func(ctx context.Context, msg *anypb.Any, cloudProperties *metadataserver.CloudProperties) (*anypb.Any, error) {
+		gar, err := parseRequest(ctx, msg)
+		if err != nil {
+			return nil, err
+		}
+		res := messageHandler(ctx, gar, cloudProperties)
+		return anyResponse(ctx, res), nil
+	}, cloudProperties)
+}
+
+// Communicate establishes ongoing communication with UAP Highway.
+// "endpoint" is the endpoint and will often be an empty string.
+// "channel" is the registered channel name to be used for communication
+// between the agent and the service provider.
+// "messageHandler" is the function that the agent will use to handle incoming messages.
+func Communicate(ctx context.Context, endpoint string, channel string, messageHandler MsgHandlerFunc, cloudProperties *metadataserver.CloudProperties) error {
 	eBackoff := setupBackoff()
 	conn := establishConnection(ctx, endpoint, channel)
 	for conn == nil {
@@ -178,29 +196,19 @@ func CommunicateWithUAP(ctx context.Context, endpoint string, channel string, me
 			lastErr = fmt.Errorf("no operation_id label in message")
 			continue
 		}
+		log.CtxLogger(ctx).Debugw("Parsed operation_id from label.", "operation_id", operationID)
 		// Reset backoff if we successfully parsed the message.
 		eBackoff.Reset()
-
-		log.CtxLogger(ctx).Debugw("Parsed operation_id from label.", "operation_id", operationID)
-
-		gaReq, err := parseRequest(ctx, msg.GetBody())
-		if err != nil {
-			logMsg := fmt.Sprintf("Encountered error during parseRequest. Will backoff and retry. err: %v", err)
-			logAndBackoff(ctx, eBackoff, logMsg)
-			lastErr = err
-			continue
-		}
 		// handle the message
-		gaRes := messageHandler(ctx, gaReq, cloudProperties)
+		res, err := messageHandler(ctx, msg.GetBody(), cloudProperties)
 		statusMsg := succeeded
-		if gaRes.GetError().GetErrorMessage() != "" {
-			log.CtxLogger(ctx).Warnw("Encountered error during UAP message handling.", "err", gaRes.GetError().GetErrorMessage())
+		if err != nil {
+			log.CtxLogger(ctx).Warnw("Encountered error during UAP message handling.", "err", err)
 			statusMsg = failed
 		}
-		log.CtxLogger(ctx).Debugw("Message handling complete.", "responseMsg", prototext.Format(gaRes), "statusMsg", statusMsg)
-		anyGar := anyResponse(ctx, gaRes)
+		log.CtxLogger(ctx).Debugw("Message handling complete.", "responseMsg", prototext.Format(res), "statusMsg", statusMsg)
 		// Send operation status message.
-		err = sendStatusMessage(ctx, operationID, anyGar, statusMsg, conn)
+		err = sendStatusMessage(ctx, operationID, res, statusMsg, conn)
 		if err != nil {
 			log.CtxLogger(ctx).Warnw("Encountered error during sendStatusMessage.", "err", err)
 			lastErr = err
