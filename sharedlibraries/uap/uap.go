@@ -19,7 +19,6 @@ package uap
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -32,7 +31,6 @@ import (
 
 	anypb "google.golang.org/protobuf/types/known/anypb"
 	acpb "github.com/GoogleCloudPlatform/agentcommunication_client/gapic/agentcommunicationpb"
-	gpb "github.com/GoogleCloudPlatform/workloadagentplatform/sharedprotos/guestactions"
 )
 
 const (
@@ -41,8 +39,6 @@ const (
 )
 
 type (
-	// MessageHandlerFunc is the function that the agent will use to handle incoming messages.
-	MessageHandlerFunc func(context.Context, *gpb.GuestActionRequest, *metadataserver.CloudProperties) *gpb.GuestActionResponse
 	// MsgHandlerFunc is the function that the agent will use to handle incoming messages.
 	MsgHandlerFunc func(context.Context, *anypb.Any, *metadataserver.CloudProperties) (*anypb.Any, error)
 )
@@ -116,41 +112,6 @@ func logAndBackoff(ctx context.Context, eBackoff backoff.BackOff, msg string) {
 	duration := eBackoff.NextBackOff()
 	log.CtxLogger(ctx).Infow(msg, "duration", duration)
 	time.Sleep(duration)
-}
-
-func anyResponse(ctx context.Context, gar *gpb.GuestActionResponse) *anypb.Any {
-	any, err := anypb.New(gar)
-	if err != nil {
-		log.CtxLogger(ctx).Infow("Failed to marshal response to any.", "err", err)
-		any = &anypb.Any{}
-	}
-	return any
-}
-
-func parseRequest(ctx context.Context, msg *anypb.Any) (*gpb.GuestActionRequest, error) {
-	gaReq := &gpb.GuestActionRequest{}
-	if err := msg.UnmarshalTo(gaReq); err != nil {
-		errMsg := fmt.Sprintf("failed to unmarshal message: %v", err)
-		return nil, errors.New(errMsg)
-	}
-	log.CtxLogger(ctx).Debugw("successfully unmarshalled message.", "gar", prototext.Format(gaReq))
-	return gaReq, nil
-}
-
-// CommunicateWithUAP establishes ongoing communication with UAP Highway.
-// "endpoint" is the endpoint and will often be an empty string.
-// "channel" is the registered channel name to be used for communication
-// between the agent and the service provider.
-// "messageHandler" is the function that the agent will use to handle incoming messages.
-func CommunicateWithUAP(ctx context.Context, endpoint string, channel string, messageHandler MessageHandlerFunc, cloudProperties *metadataserver.CloudProperties) error {
-	return Communicate(ctx, endpoint, channel, func(ctx context.Context, msg *anypb.Any, cloudProperties *metadataserver.CloudProperties) (*anypb.Any, error) {
-		gar, err := parseRequest(ctx, msg)
-		if err != nil {
-			return nil, err
-		}
-		res := messageHandler(ctx, gar, cloudProperties)
-		return anyResponse(ctx, res), nil
-	}, cloudProperties)
 }
 
 // Communicate establishes ongoing communication with UAP Highway.
