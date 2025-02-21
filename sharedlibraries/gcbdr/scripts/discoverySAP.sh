@@ -17,8 +17,9 @@
 # =============================================================================
 
 set -x
-XMLFILE="/act/custom_apps/SAPHANA.xml"
-SCRIPTS="/act/custom_apps/saphana/CustomApp_SAPHANA.sh"
+BASEPATH="/etc/google-cloud-sap-agent/gcbdr/"
+XMLFILE="/etc/google-cloud-sap-agent/gcbdr/SAPHANA.xml"
+SCRIPTS="/etc/google-cloud-sap-agent/gcbdr/backup/CustomApp_SAPHANA.sh"
 FTYPE="SAPHANA"
 DBUSER=""
 DBSID=""
@@ -32,7 +33,6 @@ LOGVOL=""
 LOGPATH=""
 DATAVOLUMEOWNER=""
 PYTHONPATH=""
-
 
 
 get_lgname()
@@ -63,7 +63,8 @@ get_pvname()
   vgname=$1
   lvname=$2
   #PVNAME=`lvdisplay -v $vgname |grep "PV Name" | awk '{print $3}' |sed -z 's/\n/,/'`
-  PVNAME=`lvs --noheading -o devices /dev/$vgname/$lvname |awk -F"(" '{print $1}'|sed -z 's/\n/,/'`
+  #PVNAME=`lvs --noheading -o devices /dev/$vgname/$lvname |awk -F"(" '{print $1}'|uniq|sed -z 's/\n/,/'`
+  PVNAME=`vgdisplay -v $vgname |grep -w "PV Name" | awk '{print $3}'|uniq|sed -z 's/\n/,/'`
   echo $PVNAME
 }
 
@@ -71,7 +72,15 @@ check_pddisk()
 {
   pvname=$1
   IS_PD=
-  IS_PD=`udevadm info $pvname | grep "scsi-0Google_PersistentDisk" | grep -v "grep" | wc -l`
+  if [[ "$pvname" =~ "nvme" ]]; then
+     IS_PD="$(nvme id-ns -b $pvname | xxd -p -seek 384 -l 256 | xxd -p -r | awk -F":" '{print $3}' |awk -F"}" '{print $1}')"
+     IS_PD="$(echo $IS_PD |sed 's/"//g')"
+     if [[ "$IS_PD" == "PERSISTENT" ]]; then
+        IS_PD=1
+     fi
+  else
+     IS_PD=`udevadm info $pvname | grep "scsi-0Google_PersistentDisk" | grep -v "grep" | wc -l`
+  fi
   if [ "$IS_PD" -gt 0 ]; then
      echo "TRUE"
   else
@@ -82,7 +91,12 @@ check_pddisk()
 get_pdname()
 {
   pvname=$1
-  pdname=`udevadm info $pvname | grep "scsi-0Google_PersistentDisk" | grep "S:" |awk -F"/" '{print $3}' |sed 's/scsi-0Google_PersistentDisk_//g'`
+  if [[ "$pvname" =~ "nvme" ]]; then
+     pdname="$(nvme id-ns -b $pvname | xxd -p -seek 384 -l 256 | xxd -p -r |awk -F":" '{print $2}' |awk -F"," '{print $1}')"
+     pdname="$(echo $pdname |sed 's/"//g')"
+  else
+      pdname=`udevadm info $pvname | grep "scsi-0Google_PersistentDisk" | grep "S:" |awk -F"/" '{print $3}' |sed 's/scsi-0Google_PersistentDisk_//g' | awk -F"-part" '{print $1}'`
+  fi
   echo $pdname
 }
 
@@ -118,7 +132,10 @@ generate_pd_details()
    else
       PVNAMES=$LGVOL
    fi
-   echo -e "\t\t\t<volume name=\"$TAG\" mountpoint=\"$MOUNT_PNT\" vgname=\"$VGNAME\" lvname=\"$LVNAME\" >" >> $XMLFILE
+   if [[ ! -z $MOUNT_PNT ]]; then
+      MOUNT_OPTIONS="$(grep -w $MOUNT_PNT /proc/mounts|grep -v etc |awk '{print $4}')"
+   fi
+   echo -e "\t\t\t<volume name=\"$TAG\" mountpoint=\"$MOUNT_PNT\" vgname=\"$VGNAME\" lvname=\"$LVNAME\" mountoptions=\"$MOUNT_OPTIONS\" >" >> $XMLFILE
    echo -e "\t\t\t\t<pddisks>" >> $XMLFILE
    for pvs in $(echo $PVNAMES |tr ',' ' ')
    do
@@ -141,10 +158,17 @@ remove_file()
   fi
 }
 
+#################################### MAIN ################################
+
+if [[ ! -d "$BASEPATH" ]]; then
+   mkdir -p $BASEPATH
+   mkdir -p $BASEPATH/touch
+fi
+
 timeout=1
 while [ $timeout -lt 10 ]
 do
-  if [ -f /act/touch/globaliniupdate ]; then
+  if [ -f $BASEPATH/touch/globaliniupdate ]; then
      sleep 10
   else
      break;
@@ -225,7 +249,7 @@ elif [ ! -z "$LOGBACKUPPATH" ] && [ -z "$CATLOGBACKUPPATH" ]; then
 fi
 
 CATLOGBACKUPPATH=`grep -iw ^basepath_catalogbackup $globalinipath | cut -d"=" -f2 | sed -e 's/^[ \t]*//'`
-LOGMODE=`grep -i log_mode $globalinipath | cut -d"=" -f2 | sed -e 's/^[ \t]*//'`
+LOGMODE=`grep -i ^log_mode $globalinipath | cut -d"=" -f2 | sed -e 's/^[ \t]*//'`
 
 HANANODE=`cat $configpath/nameserver.ini | grep -w "^worker" | awk -F "=" '{print $2}'`
 MASTERNODE=`cat $configpath/nameserver.ini | grep -w "^active_master" | awk -F "=" '{print $2}' | awk -F ":" '{print $1}'`
@@ -236,11 +260,11 @@ HARDWAREKEY=`cat $configpath/nameserver.ini | grep -w "^id" | awk -F "=" '{print
 dbuser=`echo $DBSID | tr '[A-Z]' '[a-z]'`
 dbuser="$dbuser"adm
 
-if [ ! -d /act/touch ]; then
-   mkdir -p /act/touch
-   chmod 755 /act/touch
+if [ ! -d $BASEPATH/touch ]; then
+   mkdir -p $BASEPATH/touch
+   chmod 755 $BASEPATH/touch
 else
-   chmod 755 /act/touch
+   chmod 755 $BASEPATH/touch
 fi
 
 HANANODE_COUNT=`echo $HANANODE |wc -w`
@@ -251,7 +275,7 @@ elif [ "$HANANODE_COUNT" -gt 1 ]; then
 fi
 
 if [ "$CLUSTERTYPE" != "scaleout" ]; then
-   CHECK_REPLICATION_FILE=/act/touch/replica_$DBSID.txt
+   CHECK_REPLICATION_FILE=$BASEPATH/touch/replica_$DBSID.txt
    remove_file $CHECK_REPLICATION_FILE
    if [ ! -f $CHECK_REPLICATION_FILE ]; then
       touch $CHECK_REPLICATION_FILE
@@ -261,14 +285,14 @@ if [ "$CLUSTERTYPE" != "scaleout" ]; then
    REPLICATION_ENABLED=`grep -w "operation mode:" $CHECK_REPLICATION_FILE |awk -F":" '{print $2}'|xargs`
 
    if [ "$REPLICATION_ENABLED" = "logreplay" ] || [ "$REPLICATION_ENABLED" = "logreplay_readaccess" ] || [ "$REPLICATION_ENABLED" = "sync" ] || [ "$REPLICATION_ENABLED" = "delta_datashipping" ]; then
-      MASTERNODE=`grep -w "primary masters" $CHECK_REPLICATION_FILE | awk -F":" '{print $2}'|xargs`
+      #MASTERNODE=`grep -w "primary masters" $CHECK_REPLICATION_FILE | awk -F":" '{print $2}'|xargs`
       REPLICATEDNODES=`cat $CHECK_REPLICATION_FILE | awk '/Site Mappings:/{f=0} f; /Host Mappings:/{f=2}' |awk -F"]" '{print $2}' |xargs`
       REPLICATEDNODES=`echo $REPLICATEDNODES |sed "s/$MASTERNODE//g"`
       CLUSTERTYPE="replication"
    elif [ "$REPLICATION_ENABLED" = "primary" ]; then
         MASTERNODE=`su - $DBUSER -c 'HDBSettings.sh landscapeHostConfiguration.py --sapcontrol=1 | grep -iw host  | awk -F"=" '"'"'{print $2}'"'"' '`
-        REPLICATEDNODES=`cat $CHECK_REPLICATION_FILE | awk '/Site Mappings:/{f=0} f; /Host Mappings:/{f=2}' |awk -F"]" '{print $2}' |xargs`
-        REPLICATEDNODES=`echo $REPLICATEDNODES |sed "s/$MASTERNODE//g"`
+        REPLICATEDNODES=`cat $CHECK_REPLICATION_FILE| awk '/Site Mappings:/{f=0} f; /Host Mappings:/{f=2}' |awk -F"]" '{print $2}' |xargs`
+        REPLICATEDNODES=`echo $REPLICATEDNODES |sed "s/\b$MASTERNODE\b$//g"`
         CLUSTERTYPE="replication"
    fi
    remove_file "$CHECK_REPLICATION_FILE"
@@ -312,17 +336,14 @@ else
 fi
 
 localnode=`hostname`
-uuidsql="select top 1 FILE_NAME from sys_databases.M_DATA_VOLUMES where host='$localnode'"
-uuid=`su - $dbuser -c "$hdbsql -U $USERSTOREKEY -a -j -x \"$uuidsql\""`
-uuid=`dirname $uuid`
-uuid=`dirname $uuid`
-uuid=`basename $uuid`
-if [ "$CLUSTERTYPE" = "scaleout" ]; then
-    DATAVOL=$DATAVOL"/"$uuid;
-    LOGVOL=$LOGVOL"/"$uuid;
+if [[ ! -z $USERSTOREKEY ]]; then
+   uuidsql="select top 1 FILE_NAME from sys_databases.M_DATA_VOLUMES where host='$localnode'"
+   uuid=`su - $dbuser -c "$hdbsql -U $USERSTOREKEY -a -j -x \"$uuidsql\""`
+   uuid=`dirname $uuid`
+   uuid=`dirname $uuid`
+   uuid=`basename $uuid`
 fi
 
-#CHECKDATAMNT=`df -P $DATAVOL | awk 'NR==2{print $NF}'`
 CHECKDATAMNT="$(cat /proc/mounts | grep $DATAVOL |awk '{print $2}')"
 if [ ! -z "$CHECKDATAMNT" ]; then
   DATAPATH=$CHECKDATAMNT
@@ -334,7 +355,6 @@ if [ -z "$CHECKDATAPATH" ]; then
   echo "ERRORMSG: Could not get the DATA mount path"
 fi
 
-#CHECKLOGMNT=`df -P $LOGVOL |awk 'NR==2{print $NF}'`
 CHECKLOGMNT="$(cat /proc/mounts | grep $LOGVOL |awk '{print $2}')"
 if [ ! -z "$CHECKLOGMNT" ]; then
   LOGPATH=$CHECKLOGMNT
@@ -347,8 +367,6 @@ if [ -z "$CHECKLOGPATH" ]; then
 fi
 
 DATAVOLUMEOWNER=`ls -l $DATAPATH |grep -iw "$DBSID" |grep -v "grep" | awk '{print $3":"$4}'`
-
-
 
 echo "DBUSER=$DBUSER DBSID=$DBSID  INSTANCENUM=$INSTANCENUM HVERSION=$HVERSION VERSION=$VERSION"
 echo "DATAVOL=$DATAVOL LOGVOL=$LOGVOL"
@@ -377,13 +395,6 @@ fi
 echo "*****************: data path: $DATAPATH ***********"
 
 localnode=`hostname`
-#uuidsql="select top 1 FILE_NAME from sys_databases.M_DATA_VOLUMES where host='$localnode'"
-#uuidsql="select top 1 FILE_NAME from M_DATA_VOLUMES"
-#uuid=`su - $dbuser -c "$hdbsql -U $USERSTOREKEY -a -j -x \"$uuidsql\""`
-#uuid=`dirname $uuid`
-#uuid=`dirname $uuid`
-#uuid=`basename $uuid`
-
 uuidcheck=`echo $DATAVOL |grep mnt |wc -l`
 if [ "$uuidcheck" -gt 0 ]; then
    uuid=`basename $DATAVOL`
@@ -393,11 +404,12 @@ fi
 
 if [ "$CLUSTERTYPE" = "scaleout" ]; then
    STANDBYNODE=`su - $dbuser -c "HDBSettings.sh landscapeHostConfiguration.py --sapcontrol=1 | grep hostActualRoles | grep standby | awk -F'/' '{print \\$2}' |xargs"`
+   HANANODE=`su - $dbuser -c "HDBSettings.sh landscapeHostConfiguration.py --sapcontrol=1 | grep hostActualRoles | grep worker | awk -F'/' '{print \\$2}' |xargs"`
 fi
-echo -e "\t<application name=\"$DBSID\" friendlytype=\"$FTYPE\" instance=\"$INSTANCENUM\" DBSID=\"$DBSID\" PORT=\"$INSTANCENUM\" DBPORT=\"$DBPORT\" version=\"$VERSION\" datavolowner=\"$DATAVOLUMEOWNER\" hananodes=\"$HANANODE\" masternode=\"$MASTERNODE\" standbynode=\"$STANDBYNODE\" extendedworker=\"$EXTENDED_WORKER\" keyname=\"$KEYNAME\" dbnames=\"$dbnames\" uuid=\"$uuid\" hardwarekey=\"$HARDWAREKEY\" sitename=\"$SITENAME\" configtype=\"$CONFIGTYPE\" clustertype=\"$CLUSTERTYPE\" replication_nodes=\"$REPLICATEDNODES\" >" >> $XMLFILE
+echo -e "\t<application name=\"$DBSID\" friendlytype=\"$FTYPE\" instance=\"$INSTANCENUM\" DBSID=\"$DBSID\" PORT=\"$INSTANCENUM\" DBPORT=\"$DBPORT\" version=\"$VERSION\" datavolowner=\"$DATAVOLUMEOWNER\" hananodes=\"$HANANODE\" masternode=\"$MASTERNODE\" standbynode=\"$STANDBYNODE\" extendedworker=\"$EXTENDED_WORKER\" keyname=\"$KEYNAME\" dbnames=\"$dbnames\" dbsize=\"$DBSIZE\" uuid=\"$uuid\" hardwarekey=\"$HARDWAREKEY\" sitename=\"$SITENAME\" configtype=\"$CONFIGTYPE\" clustertype=\"$CLUSTERTYPE\" replication_nodes=\"$REPLICATEDNODES\" >" >> $XMLFILE
 echo -e "\t\t<files>" >> $XMLFILE
 if [ -d $DATAPATH ]; then
-###### Modified for LVM CAF Cluster ######
+
 ############# GENERATE VOLUME for each  NODE ###################
    echo -e "\t\t\t<file path=\"$DATAPATH\" datavol=\"$DATAVOL\" >" >> $XMLFILE
    if [ ! -z "$USERSTOREKEY" ]; then
@@ -408,7 +420,7 @@ if [ -d $DATAPATH ]; then
       do
         sql="select top 1 FILE_NAME from sys_databases.M_DATA_VOLUMES where host='$nodename'"
         datapath=`su - $dbuser -c "$hdbsql -U $USERSTOREKEY -a -j -x \"$sql\""`
-    datapath=`dirname $datapath`
+        datapath=`dirname $datapath`
         datapath=`dirname $datapath`
         datapath=`echo $datapath | sed 's/"//g'`
         echo -e "\t\t\t\t<cluster nodename=\"$nodename\" path=\"$datapath\" />" >>$XMLFILE
@@ -536,7 +548,7 @@ if [ ! -z "$LOGBACKUPPATH" ] && [ -d "$LOGBACKUPPATH" ]; then
    fi
 fi
 DBSID=`echo $DBSID | tr '[a-z]' '[A-Z]'`
-HANASHARED=`ls -l /usr/sap/$DBSID/HDB"$PORT" | awk -F"->" '{print $2}'`
+HANASHARED=`ls -l /usr/sap/$DBSID/HDB"$INSTANCENUM" | awk -F"->" '{print $2}'`
 DATAMNT_LGVOL=`get_lgname $DMNTPT`
 DATAMNT_VGNAME=`get_vgname $DATAMNT_LGVOL`
 if [ ! -z "$HANASHARED" ]; then
