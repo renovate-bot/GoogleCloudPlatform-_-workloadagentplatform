@@ -135,6 +135,7 @@ func AddEvent(ctx context.Context, p Parameters) bool {
 				// NOTE: This log message has specific keys used in querying Cloud Logging.
 				// Never change these keys since it would have downstream effects.
 				log.CtxLogger(ctx).Logw(logLevel, p.Message, "metricEvent", true, "metric", p.Path, "previousValue", logEvent.lastValue, "currentValue", p.Value, "previousLabels", p.Labels, "currentLabels", logEvent.labels, "lastUpdated", logEvent.lastUpdated)
+				delete(logDelayEvents, logDelayKey)
 			})
 		}
 	}
