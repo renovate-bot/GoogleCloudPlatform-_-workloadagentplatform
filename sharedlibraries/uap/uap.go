@@ -52,7 +52,11 @@ var receive = func(c *client.Connection) (*acpb.MessageBody, error) {
 }
 
 var createConnection = func(ctx context.Context, channel string, regional bool, opts ...option.ClientOption) (*client.Connection, error) {
-	return client.CreateConnection(ctx, channel, regional, opts...)
+	acsClient, err := client.NewClient(ctx, regional, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return client.NewConnection(ctx, channel, acsClient)
 }
 
 func sendStatusMessage(ctx context.Context, operationID string, body *anypb.Any, status string, conn *client.Connection) error {
