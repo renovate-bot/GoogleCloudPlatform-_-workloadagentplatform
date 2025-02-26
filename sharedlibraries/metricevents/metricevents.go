@@ -51,8 +51,13 @@ var (
 			"0": zapcore.ErrorLevel,
 		},
 		"workload.googleapis.com/sap/cluster/nodes": map[string]zapcore.Level{
+			"-1": zapcore.ErrorLevel,
 			"0":  zapcore.ErrorLevel,
-			"-1": zapcore.WarnLevel,
+			"1":  zapcore.WarnLevel,
+			"2":  zapcore.InfoLevel,
+			"3":  zapcore.WarnLevel,
+			"4":  zapcore.WarnLevel,
+			"5":  zapcore.WarnLevel,
 		},
 		"workload.googleapis.com/sap/cluster/resources": map[string]zapcore.Level{
 			"0": zapcore.ErrorLevel,
