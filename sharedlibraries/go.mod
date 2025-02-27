@@ -7,7 +7,7 @@ require (
   cloud.google.com/go/logging v1.13.0
   cloud.google.com/go/secretmanager v1.14.4
   cloud.google.com/go/storage v1.50.0
-  github.com/GoogleCloudPlatform/agentcommunication_client v0.0.0-20250205191725-b138e4259bb9
+  github.com/GoogleCloudPlatform/agentcommunication_client v0.0.0-20250227185639-b70667e4a927
   github.com/GoogleCloudPlatform/workloadagentplatform/sharedprotos v0.0.0-20250204214646-64a35efe99db
   github.com/cenkalti/backoff/v4 v4.3.0
   github.com/fatih/color v1.18.0
