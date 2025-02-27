@@ -93,6 +93,11 @@ type Parameters struct {
 	Identifier string
 }
 
+// SetLogDelay changes how long to wait for a group of events before logging.
+func SetLogDelay(delay time.Duration) {
+	defaultLogDelay = delay
+}
+
 // AddEvent adds an event to the list of events. If the event already exists,
 // a cloud logging message is written if the value has changed.
 // Returns true if an event incurs a state change.
