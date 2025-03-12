@@ -190,6 +190,9 @@ message SapDiscovery {
         string name = 1;
         // Filesystem mount point.
         string mount_point = 2;
+
+        // Names of the disks providing this mount point.
+        repeated string disk_names = 3;
       }
 
       // Disk mounts on the instance.
