@@ -20,14 +20,15 @@ import (
 	"testing"
 
 	wpb "google.golang.org/protobuf/types/known/wrapperspb"
+	cpb "github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/protos"
+	epb "github.com/GoogleCloudPlatform/workloadagentplatform/integration/example/protos"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/testing/protocmp"
 	"go.uber.org/zap/zapcore"
-	cpb "github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/protos"
-	epb "github.com/GoogleCloudPlatform/workloadagentplatform/integration/example/protos"
 )
 
 // We are testing the Read functionality with a concrete example - the example agent configuration proto
@@ -38,6 +39,7 @@ func TestRead(t *testing.T) {
 		readFunc ReadConfigFile
 		config   proto.Message
 		want     *epb.Configuration
+		wantErr  error
 	}{
 		{
 			name: "ConfigFileWithContents",
@@ -54,6 +56,7 @@ func TestRead(t *testing.T) {
 				},
 				LogToCloud: &wpb.BoolValue{Value: false},
 			},
+			wantErr: nil,
 		},
 		{
 			name: "MalformedFConfigurationJsonFile",
@@ -61,16 +64,22 @@ func TestRead(t *testing.T) {
 				fileContent := `{"log_to_cloud": true, "cloud_properties": {"project_id": "config-project-id", "instance_id": "config-instance-id", "zone": "config-zone", } }`
 				return []byte(fileContent), nil
 			},
-			config: &epb.Configuration{},
-			want:   &epb.Configuration{LogToCloud: &wpb.BoolValue{Value: true}},
+			config:  &epb.Configuration{},
+			want:    nil,
+			wantErr: cmpopts.AnyError,
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got, _ := Read(test.path, test.readFunc, test.config)
-			if diff := cmp.Diff(test.want, got, protocmp.Transform()); diff != "" {
-				t.Errorf("ReadFromFile() for path: %s\n(-want +got):\n%s", test.path, diff)
+			got, err := Read(test.path, test.readFunc, test.config)
+			if cmp.Diff(test.wantErr, err, cmpopts.EquateErrors()) != "" {
+				t.Errorf("ReadFromFile() unexpected error, got %v want %v", err, test.wantErr)
+			}
+			if test.want != nil || got != nil {
+				if diff := cmp.Diff(test.want, got, protocmp.Transform()); diff != "" {
+					t.Errorf("ReadFromFile() for path: %s\n(-want +got):\n%s", test.path, diff)
+				}
 			}
 		})
 	}
