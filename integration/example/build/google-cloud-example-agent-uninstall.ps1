@@ -10,7 +10,12 @@
   .
 #>
 $ErrorActionPreference = 'Stop'
-$DATA_DIR = $env:ProgramData + '\Google\google-cloud-example-agent'
+if ($env:ProgramData -eq $null -or $env:ProgramData -eq '') {
+  $DATA_DIR = 'C:\Program Files\Google\google-cloud-example-agent'
+}
+else {
+  $DATA_DIR = $env:ProgramData + '\Google\google-cloud-example-agent'
+}
 $INSTALL_DIR = 'C:\Program Files\Google\google-cloud-example-agent'
 $SVC_NAME = 'google-cloud-example-agent'
 $MONITOR_TASK = 'google-cloud-example-agent-monitor'
@@ -33,7 +38,7 @@ try {
   if (Test-Path $INSTALL_DIR) {
     Remove-Item -Recurse -Force $INSTALL_DIR
   }
-  if (!($env:ProgramData -eq $null) -and !($env:ProgramData -eq '')) {
+  if (Test-Path $DATA_DIR) {
     Remove-Item -Recurse -Force $DATA_DIR
   }
 }

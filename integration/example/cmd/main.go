@@ -27,11 +27,11 @@ import (
 	"github.com/spf13/cobra"
 	"go.uber.org/zap/zapcore"
 	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/onetime"
-	"github.com/GoogleCloudPlatform/workloadagentplatform/sharedlibraries/gce/metadataserver"
-	"github.com/GoogleCloudPlatform/workloadagentplatform/sharedlibraries/log"
 	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/example/cmd/persistentflags"
 	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/example/onetime/echo"
 	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/example/service"
+	"github.com/GoogleCloudPlatform/workloadagentplatform/sharedlibraries/gce/metadataserver"
+	"github.com/GoogleCloudPlatform/workloadagentplatform/sharedlibraries/log"
 
 	cpb "github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/protos"
 )
