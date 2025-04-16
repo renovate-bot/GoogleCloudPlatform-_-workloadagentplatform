@@ -99,6 +99,9 @@ func TestGetResponseWithURLVariations(t *testing.T) {
 		case "/test/illegal_bytes":
 			w.WriteHeader(http.StatusOK)
 			fmt.Fprint(w, []byte{0xFE, 0x0F})
+		case "/test/error_response":
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprint(w, `{"error": {"code": 400, "message": "error message"}}`)
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -148,6 +151,23 @@ func TestGetResponseWithURLVariations(t *testing.T) {
 			},
 			method:  "GET",
 			baseURL: ts.URL + "/test/error",
+			wantErr: cmpopts.AnyError,
+		},
+		{
+			name: "GoogleAPIError",
+			r: &Rest{
+				HTTPClient: defaultNewClient(10*time.Minute, defaultTransport()),
+				TokenGetter: func(ctx context.Context, scopes ...string) (oauth2.TokenSource, error) {
+					return &mockToken{
+						token: &oauth2.Token{
+							AccessToken: "access-token",
+						},
+						err: nil,
+					}, nil
+				},
+			},
+			method:  "GET",
+			baseURL: ts.URL + "/test/error_response",
 			wantErr: cmpopts.AnyError,
 		},
 		{

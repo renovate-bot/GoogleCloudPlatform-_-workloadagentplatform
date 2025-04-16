@@ -20,6 +20,7 @@ package rest
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -46,6 +47,11 @@ type (
 
 		// tokenGetter abstracts getting default oauth2 access token for testing purposes.
 		TokenGetter defaultTokenGetter
+	}
+
+	// errorResponse is the response for REST API calls to cover generic api errors.
+	errorResponse struct {
+		Err googleapi.Error `json:"error"`
 	}
 )
 
@@ -108,5 +114,22 @@ func (r *Rest) GetResponse(ctx context.Context, method string, baseURL string, d
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response body, err: %w", err)
 	}
+
+	var genericResponse map[string]any
+	if err = json.Unmarshal(bodyBytes, &genericResponse); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal response body, err: %w", err)
+	}
+	if genericResponse["error"] != nil {
+		var googleapiErr errorResponse
+		if err = json.Unmarshal([]byte(bodyBytes), &googleapiErr); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal googleapi error, err: %w", err)
+		}
+
+		log.CtxLogger(ctx).Errorw("getresponse error", "error", googleapiErr)
+		if googleapiErr.Err.Code != http.StatusOK {
+			return nil, fmt.Errorf("%s", googleapiErr.Err.Message)
+		}
+	}
+
 	return bodyBytes, nil
 }
