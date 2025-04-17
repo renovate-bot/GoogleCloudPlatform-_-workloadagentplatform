@@ -20,6 +20,15 @@ $INSTALL_DIR = 'C:\Program Files\Google\google-cloud-example-agent'
 $SVC_NAME = 'google-cloud-example-agent'
 $MONITOR_TASK = 'google-cloud-example-agent-monitor'
 
+function Log-Uninstall {
+  #.DESCRIPTION
+  #  Invokes the service with usage logging enabled to log an uninstall event
+  try {
+    Start-Process $INSTALL_DIR\$BIN_NAME_EXE -ArgumentList 'logusage','-s','UNINSTALLED' | Wait-Process -Timeout 30
+  } catch {}
+}
+
+Log-Uninstall
 try {
   # stop the service / tasks and remove them
   if ($(Get-ScheduledTask $MONITOR_TASK -ErrorAction Ignore).TaskName) {

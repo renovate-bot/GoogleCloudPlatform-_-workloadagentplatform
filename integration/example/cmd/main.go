@@ -26,6 +26,7 @@ import (
 	"flag"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap/zapcore"
+	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/onetime/logusage"
 	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/common/onetime"
 	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/example/cmd/persistentflags"
 	"github.com/GoogleCloudPlatform/workloadagentplatform/integration/example/onetime/echo"
@@ -55,6 +56,7 @@ func registerSubCommands(ctx context.Context, lp log.Parameters, cp *cpb.CloudPr
 	}
 	rootCmd.AddCommand(onetime.NewVersionCommand(agentIntegration))
 	rootCmd.AddCommand(echo.NewEcho(ctx, lp, cp, agentIntegration))
+	rootCmd.AddCommand(logusage.NewCommand(ctx, lp, cp, agentIntegration))
 
 	daemon := service.NewDaemon(lp, cp, agentIntegration)
 	service.PopulateDaemonFlagValues(daemon, rootCmd.Flags())
