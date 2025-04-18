@@ -41,17 +41,17 @@ const (
 
 // GuestActions is a struct that holds the state for guest actions.
 type GuestActions struct {
-	CancelFunc          context.CancelFunc
 	guestActionsOptions guestActionsOptions
 }
 
-type guestActionHandler func(context.Context, *gpb.Command, *metadataserver.CloudProperties) *gpb.CommandResult
+// GuestActionHandler is a function that handles a guest action command.
+type GuestActionHandler func(context.Context, *gpb.Command, *metadataserver.CloudProperties) *gpb.CommandResult
 
 type guestActionsOptions struct {
 	channel         string
 	endpoint        string
 	cloudProperties *metadataserver.CloudProperties
-	handlers        map[string]guestActionHandler
+	handlers        map[string]GuestActionHandler
 }
 
 func anyResponse(ctx context.Context, gar *gpb.GuestActionResponse) *anypb.Any {

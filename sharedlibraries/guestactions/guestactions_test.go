@@ -32,7 +32,7 @@ import (
 	gpb "github.com/GoogleCloudPlatform/workloadagentplatform/sharedprotos/guestactions"
 )
 
-var testHandlers = map[string]guestActionHandler{
+var testHandlers = map[string]GuestActionHandler{
 	"version": func(ctx context.Context, command *gpb.Command, cloudProperties *metadataserver.CloudProperties) *gpb.CommandResult {
 		return &gpb.CommandResult{
 			Command:  command,
@@ -435,7 +435,6 @@ func TestMessageHandler(t *testing.T) {
 	}
 
 	ga := &GuestActions{
-		CancelFunc: func() {},
 		guestActionsOptions: guestActionsOptions{
 			handlers: testHandlers,
 		},
