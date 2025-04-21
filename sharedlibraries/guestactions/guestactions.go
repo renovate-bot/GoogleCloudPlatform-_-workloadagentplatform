@@ -41,17 +41,18 @@ const (
 
 // GuestActions is a struct that holds the state for guest actions.
 type GuestActions struct {
-	guestActionsOptions guestActionsOptions
+	options Options
 }
 
 // GuestActionHandler is a function that handles a guest action command.
 type GuestActionHandler func(context.Context, *gpb.Command, *metadataserver.CloudProperties) *gpb.CommandResult
 
-type guestActionsOptions struct {
-	channel         string
-	endpoint        string
-	cloudProperties *metadataserver.CloudProperties
-	handlers        map[string]GuestActionHandler
+// Options is a struct that holds the options for guest actions.
+type Options struct {
+	Channel         string
+	Endpoint        string
+	CloudProperties *metadataserver.CloudProperties
+	Handlers        map[string]GuestActionHandler
 }
 
 func anyResponse(ctx context.Context, gar *gpb.GuestActionResponse) *anypb.Any {
@@ -109,7 +110,7 @@ func handleShellCommand(ctx context.Context, command *gpb.Command, execute comma
 
 func (g *GuestActions) handleAgentCommand(ctx context.Context, command *gpb.Command, cloudProperties *metadataserver.CloudProperties) *gpb.CommandResult {
 	agentCommand := strings.ToLower(command.GetAgentCommand().GetCommand())
-	handler, ok := g.guestActionsOptions.handlers[agentCommand]
+	handler, ok := g.options.Handlers[agentCommand]
 	if !ok {
 		errMsg := fmt.Sprintf("received unknown agent command: %s", prototext.Format(command))
 		result := &gpb.CommandResult{
@@ -174,11 +175,15 @@ func (g *GuestActions) messageHandler(ctx context.Context, req *anypb.Any, cloud
 
 // Start starts listening to ACS/UAP and handling the related guest actions.
 func (g *GuestActions) Start(ctx context.Context, a any) {
-	args, ok := a.(guestActionsOptions)
+	args, ok := a.(Options)
 	if !ok {
 		log.CtxLogger(ctx).Warn("args is not of type guestActionsArgs")
 		return
 	}
-	g.guestActionsOptions = args
-	communication.Communicate(ctx, args.endpoint, args.channel, g.messageHandler, args.cloudProperties)
+	g.options = args
+	endpoint := defaultEndpoint
+	if g.options.Endpoint != "" {
+		endpoint = g.options.Endpoint
+	}
+	communication.Communicate(ctx, endpoint, args.Channel, g.messageHandler, args.CloudProperties)
 }

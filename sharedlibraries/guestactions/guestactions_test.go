@@ -435,8 +435,8 @@ func TestMessageHandler(t *testing.T) {
 	}
 
 	ga := &GuestActions{
-		guestActionsOptions: guestActionsOptions{
-			handlers: testHandlers,
+		options: Options{
+			Handlers: testHandlers,
 		},
 	}
 
