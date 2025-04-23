@@ -32,6 +32,7 @@ message AgentStatus {
   repeated Reference references = 9;
   string agent_name = 10;
   State cloud_api_access_full_scopes_granted = 11;
+  KernelVersion kernel_version = 12;
 }
 
 message ServiceStatus {
@@ -65,4 +66,29 @@ enum State {
   SUCCESS_STATE = 1;
   FAILURE_STATE = 2;
   ERROR_STATE = 3;
+}
+
+// KernelVersion encapsulates the kernel version data for the system.
+message KernelVersion {
+  // Version is reported as Major.Minor.Build.Patch.
+  message Version {
+    int32 major = 1;
+    int32 minor = 2;
+    int32 build = 3;
+    int32 patch = 4;
+    // A catch-all for any unparsed version components.
+    // This is in case the number of points in the version string exceeds the
+    // expected count of 4.
+    string remainder = 5;
+  }
+
+  string raw_string = 1;
+
+  // Captures the OS-specific kernel version, the portion of the string up to
+  // the first dash.
+  Version os_kernel = 2;
+
+  // Captures the distro-specific kernel version, the portion of the string
+  // following the first dash.
+  Version distro_kernel = 3;
 }
