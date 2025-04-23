@@ -22,12 +22,15 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"text/tabwriter"
 
 	"github.com/google/safetext/shsprintf"
 	"github.com/fatih/color"
+	"github.com/GoogleCloudPlatform/workloadagentplatform/sharedlibraries/log"
 	"github.com/GoogleCloudPlatform/workloadagentplatform/sharedlibraries/commandlineexecutor"
 	spb "github.com/GoogleCloudPlatform/workloadagentplatform/sharedprotos/status"
 )
@@ -49,7 +52,9 @@ const (
 )
 
 var (
-	tabWriter = tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
+	tabWriter         = tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
+	osKernelRegex     = regexp.MustCompile(`^(\d+)\.(\d+)\.(\d+)\.?(\d+)?$`)
+	distroKernelRegex = regexp.MustCompile(`^(\d+)\.(\d+)\.(\d+)\.?(\d+)?[\.-]?(.*)$`)
 )
 
 // printColor prints a string with the specified color code.
@@ -83,6 +88,71 @@ func FetchLatestVersion(ctx context.Context, packageName string, repoName string
 	default:
 		return "", fmt.Errorf("unsupported OS: %s", osType)
 	}
+}
+
+// KernelVersion returns the kernel version data for the system.
+func KernelVersion(ctx context.Context, osType string, exec commandlineexecutor.Execute) (*spb.KernelVersion, error) {
+	switch osType {
+	case osLinux:
+		return kernelVersionLinux(ctx, exec)
+	case osWindows:
+		// Windows kernel version is not supported at this time.
+		return nil, fmt.Errorf("unsupported OS: %s", osType)
+	default:
+		return nil, fmt.Errorf("unsupported OS: %s", osType)
+	}
+}
+
+// kernelVersionLinux returns the kernel version data for a linux system.
+func kernelVersionLinux(ctx context.Context, exec commandlineexecutor.Execute) (*spb.KernelVersion, error) {
+	result := exec(ctx, commandlineexecutor.Params{
+		Executable: "uname",
+		Args:       []string{"-r"},
+	})
+	if result.Error != nil {
+		return nil, fmt.Errorf("failed to fetch kernel version data: %s", result.Error)
+	}
+
+	version := &spb.KernelVersion{RawString: result.StdOut}
+	parts := strings.SplitN(result.StdOut, "-", 2)
+	if len(parts) != 2 {
+		log.CtxLogger(ctx).Debugw("Failed to parse kernel version data from stdout", "stdout", result.StdOut)
+		return version, nil
+	}
+
+	safeAtoi := func(s string) int32 {
+		if s == "" {
+			return 0
+		}
+		// Suppressing the error here as the regex ensures that the string is numeric.
+		number, _ := strconv.Atoi(s)
+		return int32(number)
+	}
+	osKernelMatch := osKernelRegex.FindStringSubmatch(parts[0])
+	if osKernelMatch == nil {
+		log.CtxLogger(ctx).Debugw("failed to parse linux kernel version from stdout", "stdout", result.StdOut)
+	} else {
+		version.OsKernel = &spb.KernelVersion_Version{
+			Major: safeAtoi(osKernelMatch[1]),
+			Minor: safeAtoi(osKernelMatch[2]),
+			Build: safeAtoi(osKernelMatch[3]),
+			Patch: safeAtoi(osKernelMatch[4]),
+		}
+	}
+	distroKernelMatch := distroKernelRegex.FindStringSubmatch(parts[1])
+	if distroKernelMatch == nil {
+		log.CtxLogger(ctx).Debugw("failed to parse distro kernel version from stdout", "stdout", result.StdOut)
+	} else {
+		version.DistroKernel = &spb.KernelVersion_Version{
+			Major:     safeAtoi(distroKernelMatch[1]),
+			Minor:     safeAtoi(distroKernelMatch[2]),
+			Build:     safeAtoi(distroKernelMatch[3]),
+			Patch:     safeAtoi(distroKernelMatch[4]),
+			Remainder: distroKernelMatch[5],
+		}
+	}
+
+	return version, nil
 }
 
 // CheckAgentEnabledAndRunning returns the status of the agent service.

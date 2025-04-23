@@ -28,6 +28,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"google.golang.org/protobuf/testing/protocmp"
 	"github.com/GoogleCloudPlatform/workloadagentplatform/sharedlibraries/commandlineexecutor"
 	spb "github.com/GoogleCloudPlatform/workloadagentplatform/sharedprotos/status"
 )
@@ -42,7 +43,7 @@ type fakeExecutor struct {
 
 func (e *fakeExecutor) ExecuteCommand(ctx context.Context, params commandlineexecutor.Params) commandlineexecutor.Result {
 	for cmd, res := range e.fakeCommandRes {
-		if strings.Contains(params.ArgsToSplit, cmd) {
+		if cmd == params.Executable || strings.Contains(params.ArgsToSplit, cmd) {
 			return res
 		}
 	}
@@ -130,6 +131,177 @@ func TestFetchLatestVersion(t *testing.T) {
 			}
 			if diff := cmp.Diff(test.wantLatest, gotLatest); diff != "" {
 				t.Errorf("FetchLatestVersion(%s, %s, %s) returned unexpected diff (-want +got):\n%s", test.packageName, test.repoName, test.osType, diff)
+			}
+		})
+	}
+}
+
+func TestKernelVersion(t *testing.T) {
+	tests := []struct {
+		name    string
+		osType  string
+		exec    *fakeExecutor
+		want    *spb.KernelVersion
+		wantErr bool
+	}{
+		{
+			name:   "LinuxCommandError",
+			osType: "linux",
+			exec: &fakeExecutor{
+				fakeCommandRes: map[string]commandlineexecutor.Result{
+					"uname": commandlineexecutor.Result{
+						Error: fmt.Errorf("could not run command"),
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name:   "LinuxInvalidCommandOutput",
+			osType: "linux",
+			exec: &fakeExecutor{
+				fakeCommandRes: map[string]commandlineexecutor.Result{
+					"uname": commandlineexecutor.Result{
+						StdOut: "1.2.3.4",
+					},
+				},
+			},
+			want: &spb.KernelVersion{
+				RawString: "1.2.3.4",
+			},
+			wantErr: false,
+		},
+		{
+			name:   "LinuxUnexpectedKernelVersion",
+			osType: "linux",
+			exec: &fakeExecutor{
+				fakeCommandRes: map[string]commandlineexecutor.Result{
+					"uname": commandlineexecutor.Result{
+						StdOut: "Major.Minor.Build.Patch-102.17.1.el8.x86_64",
+					},
+				},
+			},
+			want: &spb.KernelVersion{
+				RawString: "Major.Minor.Build.Patch-102.17.1.el8.x86_64",
+				DistroKernel: &spb.KernelVersion_Version{
+					Major:     102,
+					Minor:     17,
+					Build:     1,
+					Patch:     0,
+					Remainder: "el8.x86_64",
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name:   "LinuxUnexpectedDistroVersion",
+			osType: "linux",
+			exec: &fakeExecutor{
+				fakeCommandRes: map[string]commandlineexecutor.Result{
+					"uname": commandlineexecutor.Result{
+						StdOut: "5.15.102-Major.Minor.Build.Patch",
+					},
+				},
+			},
+			want: &spb.KernelVersion{
+				RawString: "5.15.102-Major.Minor.Build.Patch",
+				OsKernel: &spb.KernelVersion_Version{
+					Major: 5,
+					Minor: 15,
+					Build: 102,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name:   "LinuxSuccessSLES",
+			osType: "linux",
+			exec: &fakeExecutor{
+				fakeCommandRes: map[string]commandlineexecutor.Result{
+					"uname": commandlineexecutor.Result{
+						StdOut: "5.14.21-150500.55.73-default",
+					},
+				},
+			},
+			want: &spb.KernelVersion{
+				RawString: "5.14.21-150500.55.73-default",
+				OsKernel: &spb.KernelVersion_Version{
+					Major: 5,
+					Minor: 14,
+					Build: 21,
+				},
+				DistroKernel: &spb.KernelVersion_Version{
+					Major:     150500,
+					Minor:     55,
+					Build:     73,
+					Remainder: "default",
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name:   "LinuxSuccessRHEL",
+			osType: "linux",
+			exec: &fakeExecutor{
+				fakeCommandRes: map[string]commandlineexecutor.Result{
+					"uname": commandlineexecutor.Result{
+						StdOut: "4.18.1.2-372.143.3.4.el8_6.x86_64",
+					},
+				},
+			},
+			want: &spb.KernelVersion{
+				RawString: "4.18.1.2-372.143.3.4.el8_6.x86_64",
+				OsKernel: &spb.KernelVersion_Version{
+					Major: 4,
+					Minor: 18,
+					Build: 1,
+					Patch: 2,
+				},
+				DistroKernel: &spb.KernelVersion_Version{
+					Major:     372,
+					Minor:     143,
+					Build:     3,
+					Patch:     4,
+					Remainder: "el8_6.x86_64",
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name:   "Windows",
+			osType: "windows",
+			exec: &fakeExecutor{
+				fakeCommandRes: map[string]commandlineexecutor.Result{
+					"uname": commandlineexecutor.Result{
+						StdOut: "5.15.102-102.17.1.el8.x86_64",
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name:   "UnknownOS",
+			osType: "unknown",
+			exec: &fakeExecutor{
+				fakeCommandRes: map[string]commandlineexecutor.Result{
+					"uname": commandlineexecutor.Result{
+						StdOut: "5.15.102-102.17.1.el8.x86_64",
+					},
+				},
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := KernelVersion(t.Context(), test.osType, test.exec.ExecuteCommand)
+			gotErr := err != nil
+			if gotErr != test.wantErr {
+				t.Errorf("KernelVersion() returned err: %v, wantErr: %v", err, test.wantErr)
+			}
+			if diff := cmp.Diff(test.want, got, protocmp.Transform()); diff != "" {
+				t.Errorf("KernelVersion() returned unexpected diff (-want +got):\n%s", diff)
 			}
 		})
 	}
