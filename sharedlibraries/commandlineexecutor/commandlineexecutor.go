@@ -132,7 +132,7 @@ one was encountered during execution.
 */
 func ExecuteCommand(ctx context.Context, params Params) Result {
 	if !exists(params.Executable) {
-		log.Logger.Debugw("Command executable not found", "executable", params.Executable)
+		log.CtxLogger(ctx).Debugw("Command executable not found", "executable", params.Executable)
 		msg := fmt.Sprintf("Command executable: %q not found.", params.Executable)
 		return Result{"", msg, 0, fmt.Errorf("command executable: %s not found", params.Executable), false, false}
 	}
@@ -164,11 +164,11 @@ func ExecuteCommand(ctx context.Context, params Params) Result {
 		err = setupExeForPlatform(ctx, exe, params, ExecuteCommand)
 	}
 	if err != nil {
-		log.Logger.Debugw("Could not setup the executable environment", "executable", params.Executable, "args", args, "error", err)
+		log.CtxLogger(ctx).Debugw("Could not setup the executable environment", "executable", params.Executable, "args", args, "error", err)
 		return Result{stdout.String(), stderr.String(), 0, err, true, false}
 	}
 
-	log.Logger.Debugw("Executing command", "executable", params.Executable, "args", args,
+	log.CtxLogger(ctx).Debugw("Executing command", "executable", params.Executable, "args", args,
 		"timeout", timeout, "user", params.User, "env", params.Env)
 
 	if run != nil {
@@ -184,7 +184,7 @@ func ExecuteCommand(ctx context.Context, params Params) Result {
 		if len(m) > 0 {
 			atoi, serr := strconv.Atoi(m[1])
 			if serr != nil {
-				log.Logger.Debugw("Failed to get command exit code from string match", "executable", params.Executable,
+				log.CtxLogger(ctx).Debugw("Failed to get command exit code from string match", "executable", params.Executable,
 					"args", args, "error", serr)
 			} else {
 				// This is the case where we expect to have an Error but want the exit code from the "exit status #" string
@@ -192,7 +192,7 @@ func ExecuteCommand(ctx context.Context, params Params) Result {
 				exitStatusParsed = true
 			}
 		} else {
-			log.Logger.Debugw("Error encountered when executing command", "executable", params.Executable,
+			log.CtxLogger(ctx).Debugw("Error encountered when executing command", "executable", params.Executable,
 				"args", args, "exitcode", exitCode, "error", err, "stdout", stdout.String(),
 				"stderr", stderr.String())
 		}
@@ -200,7 +200,7 @@ func ExecuteCommand(ctx context.Context, params Params) Result {
 	}
 
 	// Exit code can assumed to be 0
-	log.Logger.Debugw("Successfully executed command", "executable", params.Executable, "args", args,
+	log.CtxLogger(ctx).Debugw("Successfully executed command", "executable", params.Executable, "args", args,
 		"stdout", stdout.String(), "stderr", stderr.String())
 	return Result{stdout.String(), stderr.String(), 0, nil, true, false}
 }
