@@ -28,12 +28,37 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	arpb "cloud.google.com/go/artifactregistry/apiv1/artifactregistrypb"
 	"github.com/google/safetext/shsprintf"
+	"cloud.google.com/go/artifactregistry/apiv1"
 	"github.com/fatih/color"
-	"github.com/GoogleCloudPlatform/workloadagentplatform/sharedlibraries/log"
+	"github.com/googleapis/gax-go/v2"
+	"golang.org/x/mod/semver"
+	"google.golang.org/api/iterator"
 	"github.com/GoogleCloudPlatform/workloadagentplatform/sharedlibraries/commandlineexecutor"
+	"github.com/GoogleCloudPlatform/workloadagentplatform/sharedlibraries/log"
 	spb "github.com/GoogleCloudPlatform/workloadagentplatform/sharedprotos/status"
 )
+
+// ArtifactRegistryClient is a wrapper for the Google Artifact Registry client.
+type ArtifactRegistryClient struct {
+	Client *artifactregistry.Client
+}
+
+// ARClientInterface is an interface for the Google Artifact Registry client.
+type ARClientInterface interface {
+	ListVersions(ctx context.Context, req *arpb.ListVersionsRequest, opts ...gax.CallOption) VersionIterator
+}
+
+// VersionIterator is an interface for the Google Artifact Registry client.
+type VersionIterator interface {
+	Next() (*arpb.Version, error)
+}
+
+// ListVersions lists the versions of a package in Artifact Registry.
+func (arClient *ArtifactRegistryClient) ListVersions(ctx context.Context, req *arpb.ListVersionsRequest, opts ...gax.CallOption) VersionIterator {
+	return arClient.Client.ListVersions(ctx, req, opts...)
+}
 
 // Define color codes as an enum
 type colorCode int
@@ -75,6 +100,37 @@ func printColor(code colorCode, str string, a ...any) {
 		colorString = fmt.Sprintf(str, a...)
 	}
 	fmt.Fprint(tabWriter, colorString)
+}
+
+// LatestVersionArtifactRegistry returns latest version of the agent package
+// from artifact registry.
+func LatestVersionArtifactRegistry(ctx context.Context, arClient ARClientInterface, projectName string, repositoryLocation string, repositoryName string, packageName string) (string, error) {
+	var versions []string
+	it := arClient.ListVersions(ctx, &arpb.ListVersionsRequest{
+		Parent: fmt.Sprintf("projects/%s/locations/%s/repositories/%s/packages/%s", projectName, repositoryLocation, repositoryName, packageName),
+	})
+	for {
+		resp, err := it.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return "", err
+		}
+		// Strip the repo, location, and package path from the response.
+		versions = append(versions, resp.GetName()[strings.LastIndex(resp.GetName(), ":")+1:])
+	}
+	if len(versions) == 0 {
+		return "", fmt.Errorf("no versions found for package: %s", packageName)
+	}
+
+	// Sort using semver versioning, convert "3.10-12345" to "v3.10.12345".
+	sort.Slice(versions, func(i, j int) bool {
+		v1 := "v" + strings.ReplaceAll(versions[i], "-", ".")
+		v2 := "v" + strings.ReplaceAll(versions[j], "-", ".")
+		return semver.Compare(v1, v2) < 0
+	})
+	return versions[len(versions)-1], nil
 }
 
 // FetchLatestVersion returns latest version of the agent package from the

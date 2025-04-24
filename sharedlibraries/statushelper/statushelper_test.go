@@ -26,12 +26,44 @@ import (
 	"testing"
 	"text/tabwriter"
 
+	arpb "cloud.google.com/go/artifactregistry/apiv1/artifactregistrypb"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/googleapis/gax-go/v2"
+	"google.golang.org/api/iterator"
 	"google.golang.org/protobuf/testing/protocmp"
 	"github.com/GoogleCloudPlatform/workloadagentplatform/sharedlibraries/commandlineexecutor"
 	spb "github.com/GoogleCloudPlatform/workloadagentplatform/sharedprotos/status"
 )
+
+type mockArtifactRegistryClient struct {
+	Versions []*arpb.Version
+}
+
+type mockVersionIterator struct {
+	Versions []*arpb.Version
+}
+
+func (m *mockArtifactRegistryClient) ListVersions(ctx context.Context, req *arpb.ListVersionsRequest, opts ...gax.CallOption) VersionIterator {
+	return &mockVersionIterator{Versions: m.Versions}
+}
+
+func (m *mockVersionIterator) Next() (*arpb.Version, error) {
+	if len(m.Versions) == 0 {
+		return nil, iterator.Done
+	}
+	version := m.Versions[0]
+	m.Versions = m.Versions[1:]
+	return version, nil
+}
+
+func fakeArtifactRegistryClient(versions []string) ARClientInterface {
+	var arVersions []*arpb.Version
+	for _, version := range versions {
+		arVersions = append(arVersions, &arpb.Version{Name: version})
+	}
+	return &mockArtifactRegistryClient{Versions: arVersions}
+}
 
 type fakeExecutor struct {
 	commandlineexecutor.Execute
@@ -55,6 +87,43 @@ func (e *fakeExecutor) CommandExists(cmd string) bool {
 		return true
 	}
 	return false
+}
+
+func TestLatestVersionArtifactRegistry(t *testing.T) {
+	tests := []struct {
+		name       string
+		arClient   ARClientInterface
+		wantLatest string
+		wantErr    error
+	}{
+		{
+			name:       "Success",
+			arClient:   fakeArtifactRegistryClient([]string{"foo/0:1.1", "foo/0:3.5-671008012"}),
+			wantLatest: "3.5-671008012",
+		},
+		{
+			name:       "EmptyVersions",
+			arClient:   fakeArtifactRegistryClient([]string{}),
+			wantLatest: "",
+			wantErr:    cmpopts.AnyError,
+		},
+		{
+			name:       "UnsortedVersions",
+			arClient:   fakeArtifactRegistryClient([]string{"foo/0:3.10-1", "foo/0:3.10-2", "foo/0:1.1-9", "foo/0:3.2-3"}),
+			wantLatest: "3.10-2",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			gotLatest, gotErr := LatestVersionArtifactRegistry(context.Background(), test.arClient, "project-name", "us-central1", "repo", "foo")
+			if !cmp.Equal(gotErr, test.wantErr, cmpopts.EquateErrors()) {
+				t.Errorf("LatestVersionArtifactRegistry(%v) returned err: %v, wantErr: %v", test.arClient, gotErr, test.wantErr)
+			}
+			if diff := cmp.Diff(test.wantLatest, gotLatest); diff != "" {
+				t.Errorf("LatestVersionArtifactRegistry(%v) returned unexpected diff (-want +got):\n%s", test.arClient, diff)
+			}
+		})
+	}
 }
 
 func TestFetchLatestVersion(t *testing.T) {
