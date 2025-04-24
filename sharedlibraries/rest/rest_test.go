@@ -100,7 +100,7 @@ func TestGetResponseWithURLVariations(t *testing.T) {
 			w.WriteHeader(http.StatusOK)
 			fmt.Fprint(w, []byte{0xFE, 0x0F})
 		case "/test/error_response":
-			w.WriteHeader(http.StatusOK)
+			w.WriteHeader(http.StatusBadRequest)
 			fmt.Fprint(w, `{"error": {"code": 400, "message": "error message"}}`)
 		default:
 			w.WriteHeader(http.StatusNotFound)

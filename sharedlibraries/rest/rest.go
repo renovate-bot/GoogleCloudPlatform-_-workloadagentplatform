@@ -115,16 +115,11 @@ func (r *Rest) GetResponse(ctx context.Context, method string, baseURL string, d
 		return nil, fmt.Errorf("failed to read response body, err: %w", err)
 	}
 
-	var genericResponse map[string]any
-	if err = json.Unmarshal(bodyBytes, &genericResponse); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response body, err: %w", err)
-	}
-	if genericResponse["error"] != nil {
+	if resp.StatusCode != http.StatusOK {
 		var googleapiErr errorResponse
 		if err = json.Unmarshal([]byte(bodyBytes), &googleapiErr); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal googleapi error, err: %w", err)
 		}
-
 		log.CtxLogger(ctx).Errorw("getresponse error", "error", googleapiErr)
 		if googleapiErr.Err.Code != http.StatusOK {
 			return nil, fmt.Errorf("%s", googleapiErr.Err.Message)
