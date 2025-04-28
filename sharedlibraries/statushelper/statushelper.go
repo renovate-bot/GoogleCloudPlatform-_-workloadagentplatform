@@ -29,7 +29,6 @@ import (
 	"text/tabwriter"
 
 	arpb "cloud.google.com/go/artifactregistry/apiv1/artifactregistrypb"
-	"github.com/google/safetext/shsprintf"
 	"cloud.google.com/go/artifactregistry/apiv1"
 	"github.com/fatih/color"
 	"github.com/googleapis/gax-go/v2"
@@ -131,19 +130,6 @@ func LatestVersionArtifactRegistry(ctx context.Context, arClient ARClientInterfa
 		return semver.Compare(v1, v2) < 0
 	})
 	return versions[len(versions)-1], nil
-}
-
-// FetchLatestVersion returns latest version of the agent package from the
-// OS package manager.
-func FetchLatestVersion(ctx context.Context, packageName string, repoName string, osType string, exec commandlineexecutor.Execute, exists commandlineexecutor.Exists) (string, error) {
-	switch osType {
-	case osLinux:
-		return packageVersionLinux(ctx, repoName, packageName, exec, exists)
-	case osWindows:
-		return packageVersionWindows(ctx, repoName, packageName, exec, exists)
-	default:
-		return "", fmt.Errorf("unsupported OS: %s", osType)
-	}
 }
 
 // KernelVersion returns the kernel version data for the system.
@@ -286,61 +272,6 @@ func agentEnabledAndRunningWindows(ctx context.Context, serviceName string, exec
 func CheckIAMRoles(ctx context.Context, projectID string, requiredRoles []string) error {
 	// Implement logic to check if the required IAM roles are present.
 	return nil
-}
-
-// packageVersionLinux returns the latest version of the agent package
-// available on the linux OS's package manager.
-func packageVersionLinux(ctx context.Context, packageName string, repoName string, exec commandlineexecutor.Execute, exists commandlineexecutor.Exists) (string, error) {
-	var cmd string
-	// Refresh metadata for only the package repo and fetch the latest version.
-	// Package managers update all metadata while running any command -  we want
-	// to avoid that to guard against unintended side effects and unnecessary
-	// runtime.
-	switch {
-	case exists("yum"):
-		yumCmd, err := shsprintf.Sprintf("sudo yum --disablerepo \"*\" --enablerepo \"%s\" --noplugins --quiet list updates | grep %s | awk \"/%s/ {print \\$2}\"", repoName, packageName, packageName)
-		if err != nil {
-			return "", fmt.Errorf("failed to get package via yum: %v", err)
-		}
-		cmd = yumCmd
-	case exists("zypper"):
-		zypperCmd, err := shsprintf.Sprintf("sudo zypper --quiet refresh %s && sudo zypper --non-interactive --no-refresh info %s  | awk \"/Version/ {print \\$3}\"", repoName, packageName)
-		if err != nil {
-			return "", fmt.Errorf("failed to get package viz zypper: %v", err)
-		}
-		cmd = zypperCmd
-	default:
-		return "", fmt.Errorf("no supported package manager found (yum or zypper)")
-	}
-
-	result := exec(ctx, commandlineexecutor.Params{
-		Executable:  "/bin/sh",
-		ArgsToSplit: fmt.Sprintf(" -c '%s'", cmd),
-	})
-
-	if result.Error != nil || result.StdOut == "" {
-		return "", fmt.Errorf("failed to fetch latest version: %#v", result)
-	}
-
-	return strings.TrimSpace(result.StdOut), nil
-}
-
-// packageVersionWindows returns the latest version of the agent package
-// available on the windows OS's package manager.
-func packageVersionWindows(ctx context.Context, packageName string, repoName string, exec commandlineexecutor.Execute, exists commandlineexecutor.Exists) (string, error) {
-	result := exec(ctx, commandlineexecutor.Params{
-		Executable:  "Powershell",
-		ArgsToSplit: "googet latest google-cloud-sap-agent",
-	})
-
-	stdOut := strings.TrimSpace(result.StdOut)
-	if result.Error != nil || stdOut == "" {
-		return "", fmt.Errorf("failed to fetch latest version: %#v", result)
-	}
-
-	// The output of the command is of the form "3.6@684522709" (version@somenumber), we want to align
-	// with the version format of the agent from linux.
-	return strings.Replace(stdOut, "@", "-", 1), nil
 }
 
 // PrintStatus prints the status of the agent and the configured services to
