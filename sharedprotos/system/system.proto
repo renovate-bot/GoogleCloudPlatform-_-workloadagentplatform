@@ -18,6 +18,7 @@ syntax = "proto3";
 package workloadagentplatform.sharedprotoss.system;
 
 import "google/protobuf/timestamp.proto";
+import "sharedprotos/status/status.proto";
 
 option go_package = "github.com/GoogleCloudPlatform/workloadagentplatform/sharedprotos/system";
 
@@ -211,6 +212,10 @@ message SapDiscovery {
       // This field is only used in local discovery, and should be removed
       // before sending to DW.
       repeated DiskDeviceName disk_device_names = 8;
+
+      // The kernel version of the instance.
+      workloadagentplatform.sharedprotos.status.KernelVersion
+          os_kernel_version = 9;
     }
 
     // A set of properties only applying to instance type resources.
