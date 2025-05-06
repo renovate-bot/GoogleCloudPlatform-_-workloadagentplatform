@@ -1,6 +1,6 @@
 module github.com/GoogleCloudPlatform/workloadagentplatform/integration/example
 
-go 1.23
+go 1.24
 
 replace github.com/GoogleCloudPlatform/workloadagentplatform/integration/example/cmd v0.0.0 => ./cmd
 

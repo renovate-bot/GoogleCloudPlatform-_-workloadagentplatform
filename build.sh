@@ -35,12 +35,12 @@ set -exu
 
 echo "Starting the build process for the Workload Agent Platform..."
 
-echo "**************  Getting go 1.23.2"
-curl -sLOS https://go.dev/dl/go1.23.2.linux-amd64.tar.gz
+echo "**************  Getting go 1.24.2"
+curl -sLOS https://go.dev/dl/go1.24.2.linux-amd64.tar.gz
 chmod -fR u+rwx /tmp/wap || :
 rm -fr /tmp/wap
 mkdir -p /tmp/wap
-tar -C /tmp/wap -xzf go1.23.2.linux-amd64.tar.gz
+tar -C /tmp/wap -xzf go1.24.2.linux-amd64.tar.gz
 
 export GOROOT=/tmp/wap/go
 export GOPATH=/tmp/wap/gopath
