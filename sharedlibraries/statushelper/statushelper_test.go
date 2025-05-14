@@ -209,7 +209,7 @@ func TestKernelVersion(t *testing.T) {
 			exec: &fakeExecutor{
 				fakeCommandRes: map[string]commandlineexecutor.Result{
 					"uname": commandlineexecutor.Result{
-						StdOut: "5.14.21-150500.55.73-default",
+						StdOut: "5.14.21-150500.55.73-default\n",
 					},
 				},
 			},
@@ -235,7 +235,7 @@ func TestKernelVersion(t *testing.T) {
 			exec: &fakeExecutor{
 				fakeCommandRes: map[string]commandlineexecutor.Result{
 					"uname": commandlineexecutor.Result{
-						StdOut: "4.18.1.2-372.143.3.4.el8_6.x86_64",
+						StdOut: "4.18.1.2-372.143.3.4.el8_6.x86_64\n",
 					},
 				},
 			},

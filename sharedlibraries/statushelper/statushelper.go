@@ -155,6 +155,7 @@ func kernelVersionLinux(ctx context.Context, exec commandlineexecutor.Execute) (
 		return nil, fmt.Errorf("failed to fetch kernel version data: %s", result.Error)
 	}
 
+	result.StdOut = strings.TrimSpace(result.StdOut)
 	version := &spb.KernelVersion{RawString: result.StdOut}
 	parts := strings.SplitN(result.StdOut, "-", 2)
 	if len(parts) != 2 {
