@@ -59,6 +59,7 @@ const (
 	maintenanceEventURI    = "/instance/maintenance-event"
 	upcomingMaintenanceURI = "/instance/upcoming-maintenance"
 	diskType               = "/instance/disks/"
+	instanceAttribute      = "/instance/attributes/"
 
 	helpString = `For information on permissions needed to access metadata refer: https://cloud.google.com/compute/docs/metadata/querying-metadata#permissions. Restart the agent after adding necessary permissions.`
 )
@@ -144,6 +145,31 @@ func DiskTypeWithRetry(bo backoff.BackOff, disk string) string {
 		log.Logger.Errorw("DiskType request retry limit exceeded", log.Error(err))
 	}
 	return diskType
+}
+
+// InstanceAttributeWithRetry fetches instance attributes from the GCE metadata server with a retry
+// mechanism.
+//
+// If there are any persistent errors in fetching this information, then the error will be logged
+// and the return value will be "".
+func InstanceAttributeWithRetry(bo backoff.BackOff, key string) string {
+	var (
+		attempt = 1
+		value   string
+	)
+	err := backoff.Retry(func() error {
+		var err error
+		value, err = requestInstanceAttribute(key)
+		if err != nil {
+			log.Logger.Warnw("Error in FetchInstanceAttributes", "attempt", attempt, "error", err)
+			attempt++
+		}
+		return err
+	}, bo)
+	if err != nil {
+		log.Logger.Errorw("InstanceAttributes request retry limit exceeded", log.Error(err))
+	}
+	return value
 }
 
 // get performs a get request to the metadata server and returns the response body.
@@ -232,9 +258,18 @@ func requestProperties() (*CloudProperties, error) {
 	}, nil
 }
 
-// requestDiskType attempts to fetch information from the GCE metadata server.
+// requestDiskType attempts to fetch the disk type from the GCE metadata server.
 func requestDiskType(disk string) (string, error) {
 	body, err := get(fmt.Sprintf("%s%s/type", diskType, disk), "recursive=true")
+	if err != nil {
+		return "", err
+	}
+	return string(body), nil
+}
+
+// requestInstanceAttribute attempts to fetch an instance attribute from the GCE metadata server.
+func requestInstanceAttribute(key string) (string, error) {
+	body, err := get(fmt.Sprintf("%s%s", instanceAttribute, key), "recursive=true")
 	if err != nil {
 		return "", err
 	}

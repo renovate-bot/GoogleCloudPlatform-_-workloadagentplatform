@@ -46,7 +46,7 @@ func mockMetadataServer(t *testing.T, handler endpoint) *httptest.Server {
 			w.WriteHeader(403)
 			fmt.Fprint(w, "Metadata-flavor header missing")
 		}
-		if r.URL.Path != cloudPropertiesURI && r.URL.Path != maintenanceEventURI && r.URL.Path != upcomingMaintenanceURI && !strings.HasPrefix(r.URL.Path, diskType) {
+		if r.URL.Path != cloudPropertiesURI && r.URL.Path != maintenanceEventURI && r.URL.Path != upcomingMaintenanceURI && !strings.HasPrefix(r.URL.Path, diskType) && !strings.HasPrefix(r.URL.Path, instanceAttribute) {
 			w.WriteHeader(404)
 			fmt.Fprint(w, "404 Page not found")
 		}
@@ -331,6 +331,43 @@ func TestDiskTypeWithRetry(t *testing.T) {
 			got := DiskTypeWithRetry(testBackOffPolicy(), "any")
 			if test.want != got {
 				t.Errorf("DiskTypeWithRetry()=%v, want %v", got, test.want)
+			}
+		})
+	}
+}
+
+func TestInstanceAttributeWithRetry(t *testing.T) {
+	tests := []struct {
+		name string
+		url  endpoint
+		want string
+	}{
+		{
+			name: "success",
+			url: endpoint{
+				uri:          fmt.Sprintf("%s%s", instanceAttribute, "any"),
+				responseBody: "anyType",
+			},
+			want: "anyType",
+		},
+		{
+			name: "invalid attribute",
+			url: endpoint{
+				uri:          fmt.Sprintf("%s%s", instanceAttribute, "any"),
+				responseBody: "error",
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ts := mockMetadataServer(t, test.url)
+			defer ts.Close()
+			metadataServerURL = ts.URL
+
+			got := InstanceAttributeWithRetry(testBackOffPolicy(), "any")
+			if test.want != got {
+				t.Errorf("InstanceAttributeWithRetry()=%v, want %v", got, test.want)
 			}
 		})
 	}
