@@ -88,7 +88,7 @@ func listenForMessages(ctx context.Context, conn *client.Connection, endpoint st
 
 func establishConnection(ctx context.Context, endpoint string, channel string) *client.Connection {
 	log.CtxLogger(ctx).Infow("Establishing connection with ACS.", "endpoint", endpoint, "channel", channel)
-	opts := []option.ClientOption{}
+	var opts []option.ClientOption
 	if endpoint != "" {
 		log.CtxLogger(ctx).Infow("Using non-default endpoint.", "endpoint", endpoint)
 		opts = append(opts, option.WithEndpoint(endpoint))
@@ -181,4 +181,29 @@ func Communicate(ctx context.Context, endpoint string, channel string, messageHa
 			lastErr = err
 		}
 	}
+}
+
+// EstablishACSConnection establishes a connection to ACS.
+// "endpoint" is the endpoint and will often be an empty string.
+// "channel" is the registered channel name to be used for communication
+// between the agent and the service provider.
+func EstablishACSConnection(ctx context.Context, endpoint string, channel string) *client.Connection {
+	return establishConnection(ctx, endpoint, channel)
+}
+
+// SendAgentMessage sends a message from the agent to the service provider via ACS
+// "messageKey" is the label key to be used for the message.
+// "messageType" is the label value of the message.
+// "body" is the body of the message.
+// "conn" is the connection to ACS.
+func SendAgentMessage(ctx context.Context, messageKey string, messageType string, body *anypb.Any, conn *client.Connection) error {
+	labels := map[string]string{
+		messageKey: messageType,
+	}
+	messageToSend := &acpb.MessageBody{Labels: labels, Body: body}
+	log.CtxLogger(ctx).Debugw("Sending agent message via ACS.", "messageToSend", messageToSend)
+	if err := sendMessage(conn, messageToSend); err != nil {
+		return fmt.Errorf("error sending agent message via ACS: %v", err)
+	}
+	return nil
 }

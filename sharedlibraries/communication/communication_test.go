@@ -215,6 +215,40 @@ func TestEstablishConnection(t *testing.T) {
 	}
 }
 
+func TestEstablishACSConnection(t *testing.T) {
+	tests := []struct {
+		name             string
+		want             *client.Connection
+		createConnection func(ctx context.Context, channel string, regional bool, opts ...option.ClientOption) (*client.Connection, error)
+	}{
+		{
+			name: "typical",
+			want: &client.Connection{},
+			createConnection: func(ctx context.Context, channel string, regional bool, opts ...option.ClientOption) (*client.Connection, error) {
+				return &client.Connection{}, nil
+			},
+		},
+		{
+			name: "error",
+			want: nil,
+			createConnection: func(ctx context.Context, channel string, regional bool, opts ...option.ClientOption) (*client.Connection, error) {
+				return nil, cmpopts.AnyError
+			},
+		},
+	}
+
+	ctx := context.Background()
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			createConnection = test.createConnection
+			got := EstablishACSConnection(ctx, "endpoint", "channel")
+			if diff := cmp.Diff(test.want, got, protocmp.Transform(), cmpopts.IgnoreUnexported(client.Connection{})); diff != "" {
+				t.Errorf("EstablishACSConnection() returned diff (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
 func TestCommunicate(t *testing.T) {
 	tests := []struct {
 		name             string
@@ -335,6 +369,40 @@ func TestCommunicate(t *testing.T) {
 			// If the desired error substring is not present, give an error showing the diff.
 			if diff := cmp.Diff(test.want, gotStr, cmpopts.EquateErrors()); diff != "" {
 				t.Errorf("Communicate() returned diff (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestSendAgentMessage(t *testing.T) {
+	tests := []struct {
+		name        string
+		want        error
+		sendMessage func(c *client.Connection, msg *acpb.MessageBody) error
+	}{
+		{
+			name: "typical",
+			want: nil,
+			sendMessage: func(c *client.Connection, msg *acpb.MessageBody) error {
+				return nil
+			},
+		},
+		{
+			name: "errorSendingMessage",
+			want: cmpopts.AnyError,
+			sendMessage: func(c *client.Connection, msg *acpb.MessageBody) error {
+				return fmt.Errorf("sendMessage error")
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			sendMessage = test.sendMessage
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+			got := SendAgentMessage(ctx, "messageKey", "MessageType", &apb.Any{Value: []byte("test body")}, &client.Connection{})
+			if diff := cmp.Diff(test.want, got, cmpopts.EquateErrors()); diff != "" {
+				t.Errorf("SendMessage() returned diff (-want +got):\n%s", diff)
 			}
 		})
 	}
