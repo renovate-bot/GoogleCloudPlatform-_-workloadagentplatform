@@ -1,0 +1,406 @@
+/*
+Copyright 2024 Google LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+syntax = "proto3";
+
+package workloadagentplatform.sharedprotos.databasecenter;
+
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+
+option go_package = "github.com/GoogleCloudPlatform/workloadagentplatform/sharedprotos/databasecenter";
+
+// DatabaseResourceId will serve as primary key for any resource ingestion
+// event.
+message DatabaseResourceId {
+  enum Provider {
+    PROVIDER_UNSPECIFIED = 0;
+
+    // Google cloud platform provider
+    GCP = 1;
+
+    // Amazon web service
+    AWS = 2;
+
+    // Azure web service
+    AZURE = 3;
+
+    // On-prem database resources.
+    ONPREM = 4;
+
+    // Self-managed database provider.
+    // These are resources on a cloud platform,
+    // e.g., database resource installed in a GCE VM,
+    // but not a managed database service.
+    SELFMANAGED = 5;
+
+    // For the rest of the other categories.
+    // Other refers to the rest of other database service providers, this could
+    // be smaller cloud provider. This needs to be provided when the provider is
+    // known, but it is not present in the existing set of enum values.
+    PROVIDER_OTHER = 6;
+  }
+
+  // Cloud provider name. Ex: GCP/AWS/Azure/OnPrem/SelfManaged
+  Provider provider = 1;
+
+  // Needs to be used only when the provider is PROVIDER_OTHER.
+  string provider_description = 3;
+
+  // A service-local token that distinguishes this resource from other resources
+  // within the same service.
+  string unique_id = 2;
+
+  // The type of resource this ID is identifying. Ex
+  // compute.googleapis.com/Instance
+  // REQUIRED Please refer go/condor-common-datamodel
+  string resource_type = 4;
+}
+
+// MachineConfiguration describes the configuration of a machine specific to
+// Database Resource.
+message MachineConfiguration {
+  reserved 1;
+  // Memory size in bytes.
+  int64 memory_size_in_bytes = 2;
+
+  // Number of shards (if applicable).
+  int32 shard_count = 3;
+
+  // The number of vCPUs.
+  double vcpu_count = 4;
+}
+
+message DatabaseResourceFeed {
+  reserved 1;
+  // Timestamp when feed is generated.
+  google.protobuf.Timestamp feed_timestamp = 2;
+
+  enum FeedType {
+    FEEDTYPE_UNSPECIFIED = 0;
+
+    // Database resource metadata feed from control plane
+    RESOURCE_METADATA = 1;
+
+    reserved 2, 3, 4;
+  }
+
+  // Type feed to be ingested into condor
+  FeedType feed_type = 3;
+
+  oneof Content {
+    DatabaseResourceMetadata resource_metadata = 4;
+  }
+}
+
+// Message type for storing user labels. User labels are used to tag App
+// Engine resources, allowing users to search for resources matching a set of
+// labels and to aggregate usage data by labels.
+message UserLabels {
+  map<string, string> labels = 1;
+}
+
+// Message type for storing tags. Tags provide a way to create annotations for
+// resources, and in some cases conditionally allow or deny policies based on
+// whether a resource has a specific tag.
+message Tags {
+  // The Tag key/value mappings.
+  map<string, string> tags = 1;
+}
+
+// Product specification for Condor resources.
+message Product {
+  // Type of specific database product. It could be CloudSQL, AlloyDB etc..
+  ProductType type = 1;
+
+  // The specific engine that the underlying database is running.
+  Engine engine = 2;
+
+  // Version of the underlying database engine. Example values: For MySQL, it
+  // could be "8.0", "5.7" etc.. For Postgres, it could be "14", "15" etc..
+  string version = 3;
+}
+
+// Engine refers to underlying database binary running in an instance.
+enum Engine {
+  reserved 5, 7, 8, 9, 10, 11;
+
+  // UNSPECIFIED means engine type is not known or available.
+  ENGINE_UNSPECIFIED = 0;
+
+  // MySQL binary running as an engine in the database instance.
+  ENGINE_MYSQL = 1;
+
+  // Postgres binary running as engine in database instance.
+  ENGINE_POSTGRES = 2;
+
+  // SQLServer binary running as engine in database instance.
+  ENGINE_SQL_SERVER = 3;
+
+  // Native database binary running as engine in instance.
+  ENGINE_NATIVE = 4;
+
+  // Other refers to rest of other database engine. This is to be when engine is
+  // known, but it is not present in this enum.
+  ENGINE_OTHER = 6;
+}
+
+// ProductType is used to identify a database service offering either in a cloud
+// provider or on-premise. This enum needs to be updated whenever we introduce
+// a new ProductType.
+enum ProductType {
+  // UNSPECIFIED means product type is not known or available.
+  PRODUCT_TYPE_UNSPECIFIED = 0;
+
+  reserved 1, 2, 3, 6, 7, 8;
+
+  // On-premise product area
+  PRODUCT_TYPE_ON_PREM = 4;
+
+  // Other refers to rest of other product type. This is to be when product type
+  // is known, but it is not present in this enum.
+  PRODUCT_TYPE_OTHER = 5;
+
+  // Compute Engine self managed databases
+  PRODUCT_TYPE_COMPUTE_ENGINE = 9;
+}
+
+// InstanceType refers to type of database resource instance.
+// Next ID: 11
+enum InstanceType {
+  reserved 1, 2, 3, 4;
+  // Unspecified.
+  INSTANCE_TYPE_UNSPECIFIED = 0 [deprecated = true];
+
+  // For rest of the other categories.
+  SUB_RESOURCE_TYPE_UNSPECIFIED = 9;
+
+  // A regular primary database instance.
+  SUB_RESOURCE_TYPE_PRIMARY = 5;
+
+  // A cluster or an instance acting as a secondary.
+  SUB_RESOURCE_TYPE_SECONDARY = 6;
+
+  // An instance acting as a read-replica.
+  SUB_RESOURCE_TYPE_READ_REPLICA = 7;
+
+  // An instance acting as an external primary.
+  SUB_RESOURCE_TYPE_EXTERNAL_PRIMARY = 10;
+
+  // For rest of the other categories.
+  SUB_RESOURCE_TYPE_OTHER = 8;
+}
+
+// Common model for database resource instance metadata.
+// Next ID: 25
+message DatabaseResourceMetadata {
+  // Unique identifier for a Database resource
+  DatabaseResourceId id = 1;
+
+  // Different from DatabaseResourceId.unique_id, a resource name can be reused
+  // over time. That is, after a resource named "ABC" is deleted, the name "ABC"
+  // can be used to to create a new resource within the same source. Resource
+  // name to follow CAIS resource_name format as noted here
+  // go/condor-common-datamodel
+  string resource_name = 2;
+
+  // Identifier for this resource's immediate parent/primary resource if the
+  // current resource is a replica or derived form of another Database resource.
+  // Else it would be NULL.
+  // REQUIRED if the immediate parent exists when first time resource is getting
+  // ingested, otherwise optional.
+  DatabaseResourceId primary_resource_id = 3;
+
+  // Primary resource location.
+  // REQUIRED if the immediate parent exists when first time resource is getting
+  // ingested, otherwise optional.
+  string primary_resource_location = 21;
+
+  // Closest parent Cloud Resource Manager container of
+  // this resource. It must be resource name of a Cloud Resource Manager
+  // project with the format of "<type>/<number>", such as
+  // "projects/123".
+  // For GCP provided resources, number should be project number.
+  string resource_container = 4;
+
+  // The resource location.
+  // REQUIRED
+  string location = 5;
+
+  // The creation time of the resource, i.e. the time when resource is created
+  // and recorded in partner service.
+  google.protobuf.Timestamp creation_time = 6;
+
+  // The time at which the resource was updated and recorded at partner service.
+  google.protobuf.Timestamp updation_time = 7;
+
+  enum State {
+    STATE_UNSPECIFIED = 0;
+
+    // The instance is running.
+    HEALTHY = 1;
+
+    // Instance being created, updated, deleted or under maintenance
+    UNHEALTHY = 2;
+
+    // When instance is suspended
+    SUSPENDED = 4;
+
+    // Instance is deleted.
+    DELETED = 5;
+
+    // For rest of the other category
+    STATE_OTHER = 3;
+  }
+
+  // The state that the instance is expected to be in. For example, an instance
+  // state can transition to UNHEALTHY due to wrong patch update, while the
+  // expected state will remain at the HEALTHY.
+  State expected_state = 8;
+
+  // Current state of the instance.
+  State current_state = 9;
+
+  // The type of the instance. Specified at creation time.
+  InstanceType instance_type = 10;
+
+  // The product this resource represents.
+  Product product = 11;
+
+  // Availability configuration for this instance
+  AvailabilityConfiguration availability_configuration = 13;
+
+  // Backup configuration for this instance
+  BackupConfiguration backup_configuration = 14;
+
+  // Latest backup run information for this instance
+  BackupRun backup_run = 15;
+
+  // User-provided labels associated with the resource
+  UserLabels user_label_set = 18;
+
+  // Machine configuration for this resource.
+  MachineConfiguration machine_configuration = 19;
+
+  // Tags associated with this resources.
+  Tags tags_set = 20;
+
+  reserved 12, 16, 17, 22, 23, 24;
+}
+
+// Configuration for availability of database instance
+message AvailabilityConfiguration {
+  // Availability type. Potential values:
+  // *  `ZONAL`: The instance serves data from only one zone. Outages in that
+  // zone affect data accessibility.
+  // *  `REGIONAL`: The instance can serve data from more than one zone in a
+  // region (it is highly available).
+  AvailabilityType availability_type = 1;
+  bool external_replica_configured = 2;
+
+  bool promotable_replica_configured = 3;
+
+  // Checks for resources that are configured to have redundancy, and ongoing
+  // replication across regions
+  bool cross_region_replica_configured = 4;
+
+  // Checks for existence of (multi-cluster) routing configuration that allows
+  // automatic failover to a different zone/region in case of an outage.
+  // Applicable to Bigtable resources.
+  bool automatic_failover_routing_configured = 5;
+}
+
+// The availability type of the given database instance.
+enum AvailabilityType {
+  AVAILABILITY_TYPE_UNSPECIFIED = 0;
+
+  // Zonal available instance.
+  ZONAL = 1;
+
+  // Regional available instance.
+  REGIONAL = 2;
+
+  // Multi regional instance
+  MULTI_REGIONAL = 3;
+
+  // For rest of the other category
+  AVAILABILITY_TYPE_OTHER = 4;
+}
+
+// Configuration for automatic backups
+message BackupConfiguration {
+  // Whether customer visible automated backups are enabled on the instance.
+  bool automated_backup_enabled = 1;
+
+  // Backup retention settings.
+  RetentionSettings backup_retention_settings = 2;
+
+  // Whether point-in-time recovery is enabled. This is optional field, if the
+  // database service does not have this feature or metadata is not available in
+  // control plane, this can be omitted.
+  bool point_in_time_recovery_enabled = 3;
+}
+
+// GCBDR Configuration for the resource.
+// (-- api-linter: core::0140::abbreviations=disabled
+//     aip.dev/not-precedent: This is required for consistency with the existing
+//     configuration fields defined in the proto. --)
+message GCBDRConfiguration {
+  // Whether the resource is managed by GCBDR.
+  bool gcbdr_managed = 1;
+}
+
+message RetentionSettings {
+  reserved 1, 2;
+  // Depending on the value of retention_unit, this is used to determine
+  // if a backup needs to be deleted.  If retention_unit is 'COUNT', we will
+  // retain this many backups.
+  oneof retention {
+    google.protobuf.Int32Value quantity_based_retention = 3;
+    // Duration based retention period i.e. 172800 seconds (2 days)
+    google.protobuf.Duration duration_based_retention = 4;
+    // Timestamp based retention period i.e. 2024-05-01T00:00:00Z
+    google.protobuf.Timestamp timestamp_based_retention_time = 5;
+  }
+}
+
+// A backup run.
+message BackupRun {
+  // The status of a backup run.
+  enum Status {
+    STATUS_UNSPECIFIED = 0;
+
+    // The backup was successful.
+    SUCCESSFUL = 1;
+
+    // The backup was unsuccessful.
+    FAILED = 2;
+  }
+  // The time the backup operation started.
+  // REQUIRED
+  google.protobuf.Timestamp start_time = 1;
+
+  // The time the backup operation completed.
+  // REQUIRED
+  google.protobuf.Timestamp end_time = 6;
+
+  // The status of this run.
+  // REQUIRED
+  Status status = 2;
+
+  reserved 3;
+}
