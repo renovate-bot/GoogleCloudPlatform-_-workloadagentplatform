@@ -209,6 +209,10 @@ func (l *Logger) requestComputeAPIWithUserAgent(url, ua string) error {
 	}
 	req.Header.Add("Metadata-Flavor", "Google")
 	req.Header.Add("User-Agent", ua)
+	// Sets the consumer project for the request if it exists.
+	if l.cloudProps != nil && l.cloudProps.ProjectID != "" {
+		req.Header.Add("X-Goog-User-Project", l.cloudProps.ProjectID)
+	}
 	client, _ := google.DefaultClient(context.Background(), compute.ComputeScope)
 	if client == nil {
 		client = http.DefaultClient // If OAUTH fails, use the default http client.
