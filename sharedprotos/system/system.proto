@@ -15,7 +15,7 @@ limitations under the License.
 */
 syntax = "proto3";
 
-package workloadagentplatform.sharedprotoss.system;
+package workloadagentplatform.sharedprotos.system;
 
 import "google/protobuf/timestamp.proto";
 import "sharedprotos/status/status.proto";
