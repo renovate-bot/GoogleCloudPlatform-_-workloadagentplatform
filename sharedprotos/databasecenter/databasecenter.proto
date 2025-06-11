@@ -154,6 +154,12 @@ enum Engine {
   // Native database binary running as engine in instance.
   ENGINE_NATIVE = 4;
 
+  // Oracle Exadata engine.
+  ENGINE_EXADATA_ORACLE = 12;
+
+  // Oracle Autonomous DB Serverless engine.
+  ENGINE_ADB_SERVERLESS_ORACLE = 13;
+
   // Other refers to rest of other database engine. This is to be when engine is
   // known, but it is not present in this enum.
   ENGINE_OTHER = 6;
@@ -177,6 +183,9 @@ enum ProductType {
 
   // Compute Engine self managed databases
   PRODUCT_TYPE_COMPUTE_ENGINE = 9;
+
+  // Oracle product area in GCP
+  PRODUCT_TYPE_ORACLE_ON_GCP = 10;
 }
 
 // InstanceType refers to type of database resource instance.
