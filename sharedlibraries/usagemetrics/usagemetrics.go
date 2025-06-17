@@ -261,6 +261,7 @@ func buildComputeURL(cp *CloudProperties) string {
 	return fmt.Sprintf(computeAPIURL, cp.ProjectID, cp.Zone, cp.InstanceName)
 }
 
+// TODO: Modify usage metrics logging to be more compatible for non GCE instances.
 // buildUserAgent returns a User-Agent string that will be submitted to the compute API.
 //
 // User-Agent is of the form "UsageLogPrefix/AgentName/AgentVersion[/OptionalString]/Status".

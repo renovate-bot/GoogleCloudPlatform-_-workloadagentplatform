@@ -117,8 +117,10 @@ func (l *LogUsage) logUsageHandler(cmd *cobra.Command, cloudProps *cpb.CloudProp
 		return fmt.Errorf("for status ACTION, an action code is required")
 	}
 
-	if err := l.logUsageStatus(cloudProps); err != nil {
-		log.Logger.Warnw("Could not log usage", "error", err)
+	if cloudProps != nil {
+		if err := l.logUsageStatus(cloudProps); err != nil {
+			log.Logger.Warnw("Could not log usage", "error", err)
+		}
 	}
 	return nil
 }
