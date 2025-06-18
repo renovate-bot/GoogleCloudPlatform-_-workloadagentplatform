@@ -86,17 +86,18 @@ message MachineConfiguration {
 }
 
 message DatabaseResourceFeed {
-  reserved 1;
+  reserved 1, 5, 6, 7;
   // Timestamp when feed is generated.
   google.protobuf.Timestamp feed_timestamp = 2;
 
   enum FeedType {
+    reserved 2, 3, 4;
+    // Unspecified feed type.
     FEEDTYPE_UNSPECIFIED = 0;
-
     // Database resource metadata feed from control plane
     RESOURCE_METADATA = 1;
-
-    reserved 2, 3, 4;
+    // Config based signal data feed
+    CONFIG_BASED_SIGNAL_DATA = 5;
   }
 
   // Type feed to be ingested into condor
@@ -104,6 +105,9 @@ message DatabaseResourceFeed {
 
   oneof Content {
     DatabaseResourceMetadata resource_metadata = 4;
+    // Config based signal data is used to ingest signals that are generated
+    // based on the configuration of the database resource.
+    ConfigBasedSignalData config_based_signal_data = 8;
   }
 }
 
@@ -412,4 +416,49 @@ message BackupRun {
   Status status = 2;
 
   reserved 3;
+}
+
+// Config based signal data. This is used to send signals to Condor which are
+// based on the DB level configurations. These will be used to send signals for
+// self managed databases.
+message ConfigBasedSignalData {
+  // Database resource id.
+  DatabaseResourceId resource_id = 1;
+  // Full Resource name of the source resource.
+  string full_resource_name = 2;
+  // Last time signal was refreshed
+  google.protobuf.Timestamp last_refresh_time = 3;
+  // Signal type
+  enum SignalType {
+    // Unspecified signal type.
+    SIGNAL_TYPE_UNSPECIFIED = 0;
+    // Outdated Minor Version
+    SIGNAL_TYPE_OUTDATED_MINOR_VERSION = 1;
+    // Represents database auditing is disabled.
+    SIGNAL_TYPE_DATABASE_AUDITING_DISABLED = 2;
+    // Represents if a database has a password configured for the
+    // root account or not.
+    SIGNAL_TYPE_NO_ROOT_PASSWORD = 3;
+    // Represents if a resource is exposed to public access.
+    SIGNAL_TYPE_EXPOSED_TO_PUBLIC_ACCESS = 4;
+    // Represents if a resources requires all incoming connections to use SSL
+    // or not.
+    SIGNAL_TYPE_UNENCRYPTED_CONNECTIONS = 5;
+  }
+  // Signal type of the signal
+  SignalType signal_type = 4;
+  oneof signal_metadata {
+    // Signal data for boolean signals.
+    bool signal_bool_value = 5;
+    // Outdated minor version signal data.
+    OutdatedMinorVersionSignalData outdated_minor_version_signal_data = 6;
+  }
+}
+
+// Outdated minor version signal data. This is used to send signals to Condor
+// which are based on the DB level configurations. These will be used to send
+// signals for self managed databases.
+message OutdatedMinorVersionSignalData {
+  // The current version of the database.
+  string current_version = 1;
 }
