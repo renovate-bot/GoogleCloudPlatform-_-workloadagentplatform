@@ -137,6 +137,11 @@ message Product {
   // Version of the underlying database engine. Example values: For MySQL, it
   // could be "8.0", "5.7" etc.. For Postgres, it could be "14", "15" etc..
   string version = 3;
+
+  // Minor version of the underlying database engine. Example values: For MySQL,
+  // it could be "8.0.32", "5.7.32" etc.. For Postgres, it could be "14.3",
+  // "15.3" etc..
+  string minor_version = 4;
 }
 
 // Engine refers to underlying database binary running in an instance.
@@ -418,6 +423,24 @@ message BackupRun {
   reserved 3;
 }
 
+// Signal type
+enum SignalType {
+  // Unspecified signal type.
+  SIGNAL_TYPE_UNSPECIFIED = 0;
+  // Outdated Minor Version
+  SIGNAL_TYPE_OUTDATED_MINOR_VERSION = 1;
+  // Represents database auditing is disabled.
+  SIGNAL_TYPE_DATABASE_AUDITING_DISABLED = 2;
+  // Represents if a database has a password configured for the
+  // root account or not.
+  SIGNAL_TYPE_NO_ROOT_PASSWORD = 3;
+  // Represents if a resource is exposed to public access.
+  SIGNAL_TYPE_EXPOSED_TO_PUBLIC_ACCESS = 4;
+  // Represents if a resources requires all incoming connections to use SSL
+  // or not.
+  SIGNAL_TYPE_UNENCRYPTED_CONNECTIONS = 5;
+}
+
 // Config based signal data. This is used to send signals to Condor which are
 // based on the DB level configurations. These will be used to send signals for
 // self managed databases.
@@ -428,37 +451,10 @@ message ConfigBasedSignalData {
   string full_resource_name = 2;
   // Last time signal was refreshed
   google.protobuf.Timestamp last_refresh_time = 3;
-  // Signal type
-  enum SignalType {
-    // Unspecified signal type.
-    SIGNAL_TYPE_UNSPECIFIED = 0;
-    // Outdated Minor Version
-    SIGNAL_TYPE_OUTDATED_MINOR_VERSION = 1;
-    // Represents database auditing is disabled.
-    SIGNAL_TYPE_DATABASE_AUDITING_DISABLED = 2;
-    // Represents if a database has a password configured for the
-    // root account or not.
-    SIGNAL_TYPE_NO_ROOT_PASSWORD = 3;
-    // Represents if a resource is exposed to public access.
-    SIGNAL_TYPE_EXPOSED_TO_PUBLIC_ACCESS = 4;
-    // Represents if a resources requires all incoming connections to use SSL
-    // or not.
-    SIGNAL_TYPE_UNENCRYPTED_CONNECTIONS = 5;
-  }
   // Signal type of the signal
   SignalType signal_type = 4;
   oneof signal_metadata {
     // Signal data for boolean signals.
     bool signal_bool_value = 5;
-    // Outdated minor version signal data.
-    OutdatedMinorVersionSignalData outdated_minor_version_signal_data = 6;
   }
-}
-
-// Outdated minor version signal data. This is used to send signals to Condor
-// which are based on the DB level configurations. These will be used to send
-// signals for self managed databases.
-message OutdatedMinorVersionSignalData {
-  // The current version of the database.
-  string current_version = 1;
 }
