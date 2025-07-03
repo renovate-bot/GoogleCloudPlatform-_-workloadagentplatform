@@ -62,6 +62,9 @@ const (
 	instanceAttribute      = "/instance/attributes/"
 
 	helpString = `For information on permissions needed to access metadata refer: https://cloud.google.com/compute/docs/metadata/querying-metadata#permissions. Restart the agent after adding necessary permissions.`
+
+	// PlatformCloudRun identifies Google Cloud Run environments.
+	PlatformCloudRun = "CLOUD_RUN"
 )
 
 type (
@@ -95,7 +98,10 @@ type (
 	// CloudProperties contains the cloud properties of the instance.
 	CloudProperties struct {
 		ProjectID, NumericProjectID, InstanceID, Zone, InstanceName, Image, MachineType, Region string
-		Scopes                                                                                  []string
+		// Platform identifies the compute environment, e.g., default = GCE can be CLOUD_RUN.
+		Platform string
+		JobName  string // Cloud Run job name
+		Scopes   []string
 	}
 )
 

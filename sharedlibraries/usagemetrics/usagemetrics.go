@@ -27,7 +27,9 @@ import (
 	"time"
 
 	"google.golang.org/api/compute/v1"
+	"google.golang.org/api/run/v2"
 	"golang.org/x/oauth2/google"
+	"github.com/GoogleCloudPlatform/workloadagentplatform/sharedlibraries/gce/metadataserver"
 	"github.com/GoogleCloudPlatform/workloadagentplatform/sharedlibraries/log"
 )
 
@@ -78,11 +80,17 @@ func (ap *AgentProperties) getLogUsageMetrics() bool {
 // CloudProperties contains the properties of the cloud instance used by UsageMetrics library.
 type CloudProperties struct {
 	ProjectID     string
-	Zone          string
-	InstanceName  string
 	ProjectNumber string
 	Image         string
-	InstanceID    string
+	// Platform identifies the compute environment, e.g., GCE or CLOUD_RUN.
+	Platform string
+	// GCE-specific properties
+	Zone         string
+	InstanceName string
+	InstanceID   string
+	// Cloud Run-specific properties
+	Region  string
+	JobName string
 }
 
 // A Logger is used to report the status of the agent to an internal metadata server.
@@ -94,6 +102,7 @@ type Logger struct {
 	lastCalled             map[Status]time.Time
 	dailyLogRunningStarted bool
 	projectExclusions      map[string]bool
+	clientForTest          *http.Client // Cloud run needs a different authentocation method not available in test environemnts.
 }
 
 // NewLogger creates a new Logger with an initialized hash map of Status to a last called timestamp.
@@ -171,13 +180,29 @@ func (l *Logger) Action(id int) {
 
 func (l *Logger) log(s string) error {
 	log.Logger.Debugw("logging status", "status", s)
-	if l.cloudProps == nil || l.cloudProps.Zone == "" {
-		log.Logger.Warnw("Unable to send agent status without properly set zone in cloud properties", "l.cloudProps", l.cloudProps)
-		return errors.New("unable to send agent status without properly set zone in cloud properties")
+	if l.cloudProps == nil {
+		log.Logger.Warn("Unable to send agent status without cloud properties.")
+		return errors.New("unable to send agent status without cloud properties")
 	}
-	err := l.requestComputeAPIWithUserAgent(buildComputeURL(l.cloudProps), buildUserAgent(l.agentProps, s))
+	userAgent := buildUserAgent(l.agentProps, s)
+	var err error
+	switch l.cloudProps.Platform {
+	case metadataserver.PlatformCloudRun:
+		if l.cloudProps.Region == "" {
+			log.Logger.Warn("Unable to send Cloud Run agent status without region in cloud properties")
+			return errors.New("region is not set for Cloud Run")
+		}
+		err = l.requestCloudRunAPIWithUserAgent(buildRunURL(l.cloudProps), userAgent)
+	default:
+		if l.cloudProps.Zone == "" {
+			log.Logger.Warn("Unable to send GCE agent status without zone in cloud properties")
+			return errors.New("zone is not set for GCE")
+		}
+		err = l.requestComputeAPIWithUserAgent(buildComputeURL(l.cloudProps), userAgent)
+	}
+
 	if err != nil {
-		log.Logger.Warnw("failed to send agent status", "error", err)
+		log.Logger.Warnw("failed to send agent status", "error", err, "platform", l.cloudProps.Platform)
 		return err
 	}
 	return nil
@@ -213,13 +238,57 @@ func (l *Logger) requestComputeAPIWithUserAgent(url, ua string) error {
 	if l.cloudProps != nil && l.cloudProps.ProjectID != "" {
 		req.Header.Add("X-Goog-User-Project", l.cloudProps.ProjectID)
 	}
-	client, _ := google.DefaultClient(context.Background(), compute.ComputeScope)
-	if client == nil {
-		client = http.DefaultClient // If OAUTH fails, use the default http client.
+	var client *http.Client
+	if l.clientForTest != nil {
+		client = l.clientForTest
+	} else {
+		var err error
+		client, err = google.DefaultClient(context.Background(), compute.ComputeScope)
+		if err != nil {
+			// Fallback for environments where we can't get default credentials.
+			log.Logger.Debugw("could not get default credentials, falling back to default http client", "error", err)
+			client = http.DefaultClient
+		}
 	}
 	if _, err = client.Do(req); err != nil {
 		return err
 	}
+	return nil
+}
+
+// requestCloudRunAPIWithUserAgent submits a GET request to the Cloud Run API with a custom user agent.
+func (l *Logger) requestCloudRunAPIWithUserAgent(url, ua string) error {
+	if l.isTestProject {
+		return nil
+	}
+	log.Logger.Debugw("requestCloudRunAPIWithUserAgent", "url", url, "ua", ua)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		log.Logger.Warnw("failed to create request", "error", err)
+		return err
+	}
+	req.Header.Add("User-Agent", ua)
+	// Sets the consumer project for the request if it exists.
+	if l.cloudProps != nil && l.cloudProps.ProjectID != "" {
+		req.Header.Add("X-Goog-User-Project", l.cloudProps.ProjectID)
+	}
+	var client *http.Client
+	if l.clientForTest != nil {
+		client = l.clientForTest
+	} else {
+		// Use the appropriate scope for Cloud Run Admin API.
+		var err error
+		client, err = google.DefaultClient(context.Background(), run.CloudPlatformScope)
+		if err != nil {
+			log.Logger.Warnw("failed to create default client", "error", err)
+			return err
+		}
+	}
+	if _, err := client.Do(req); err != nil {
+		log.Logger.Warnw("failed to send request", "error", err)
+		return err
+	}
+	log.Logger.Debugw("successfully sent request", "url", url, "ua", ua)
 	return nil
 }
 
@@ -261,7 +330,15 @@ func buildComputeURL(cp *CloudProperties) string {
 	return fmt.Sprintf(computeAPIURL, cp.ProjectID, cp.Zone, cp.InstanceName)
 }
 
-// TODO: Modify usage metrics logging to be more compatible for non GCE instances.
+// buildRunURL returns a Cloud Run Admin API URL for the specified job.
+func buildRunURL(cp *CloudProperties) string {
+	runAPIURL := "https://run.googleapis.com/v1/projects/%s/locations/%s/jobs/%s"
+	if cp == nil {
+		return fmt.Sprintf(runAPIURL, "unknown", "unknown", "unknown")
+	}
+	return fmt.Sprintf(runAPIURL, cp.ProjectID, cp.Region, cp.JobName)
+}
+
 // buildUserAgent returns a User-Agent string that will be submitted to the compute API.
 //
 // User-Agent is of the form "UsageLogPrefix/AgentName/AgentVersion[/OptionalString]/Status".

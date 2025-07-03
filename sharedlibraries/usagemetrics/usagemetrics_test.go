@@ -90,36 +90,39 @@ func TestLogger_Log(t *testing.T) {
 	tests := []struct {
 		name       string
 		agentProps *AgentProperties
+		cloudProps *CloudProperties
 		want       error
 	}{
 		{
 			name:       "noCloudProps",
 			agentProps: defaultAgentProps,
-			want:       errors.New("unable to send agent status without properly set zone in cloud properties"),
+			cloudProps: nil,
+			want:       errors.New("unable to send agent status without cloud properties"),
 		},
 		{
-			name:       "noCloudPropZone",
+			name:       "noCloudPropZoneForGCE",
 			agentProps: defaultAgentProps,
-			want:       errors.New("unable to send agent status without properly set zone in cloud properties"),
+			cloudProps: zonelessCloudProps,
+			want:       errors.New("zone is not set for GCE"),
+		},
+		{
+			name:       "noCloudPropRegionForCloudRun",
+			agentProps: defaultAgentProps,
+			cloudProps: &CloudProperties{Platform: metadataserver.PlatformCloudRun},
+			want:       errors.New("region is not set for Cloud Run"),
 		},
 		{
 			name:       "success",
 			agentProps: defaultAgentProps,
+			cloudProps: defaultCloudProps,
 			want:       nil,
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			logger := NewLogger(defaultAgentProps, defaultCloudProps, clockwork.NewRealClock(), nil)
-			if test.name == "noCloudProps" {
-				logger = NewLogger(defaultAgentProps, nil, clockwork.NewRealClock(), nil)
-			}
-			if test.name == "noCloudPropZone" {
-				logger = NewLogger(defaultAgentProps, zonelessCloudProps, clockwork.NewRealClock(), nil)
-			}
+			logger := NewLogger(test.agentProps, test.cloudProps, clockwork.NewRealClock(), nil)
 			logger.isTestProject = true
-			logger.log(test.name)
 			if got := logger.log(test.name); fmt.Sprint(got) != fmt.Sprint(test.want) {
 				t.Errorf("Logger.log() expected error mismatch. got: %v want: %v", got, test.want)
 			}
@@ -335,8 +338,70 @@ func TestLogger_RequestComputeAPIWithUserAgent(t *testing.T) {
 				url = test.url
 			}
 			l := NewLogger(defaultAgentProps, test.cloudProps, defaultTimeSource, []string{testProjectNumber})
+			l.clientForTest = ts.Client()
 			if got := l.requestComputeAPIWithUserAgent(url, test.ua); !cmp.Equal(got, test.want, cmpopts.EquateErrors()) {
 				t.Errorf("Logger.requestComputeAPIWithUserAgent(%q, %q) got err=%v want err=%v", url, test.ua, got, test.want)
+			}
+		})
+	}
+}
+
+func TestLogger_RequestCloudRunAPIWithUserAgent(t *testing.T) {
+	tests := []struct {
+		name       string
+		cloudProps *CloudProperties
+		url        string
+		ua         string
+		want       error
+	}{
+		{
+			name: "success",
+			cloudProps: &CloudProperties{
+				ProjectID: "test-project",
+			},
+			ua:   "sap-core-eng/AgentName/1.0/optional/RUNNING",
+			want: nil,
+		},
+		{
+			name: "testProject",
+			cloudProps: &CloudProperties{
+				ProjectNumber: testProjectNumber,
+			},
+			want: nil,
+		},
+		{
+			name: "error",
+			cloudProps: &CloudProperties{
+				ProjectID: "test-project",
+			},
+			url:  "notAValidURL",
+			ua:   "sap-core-eng/AgentName/1.0/optional/RUNNING",
+			want: cmpopts.AnyError,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if got := r.Header.Get("User-Agent"); got != test.ua {
+					t.Errorf("requestCloudRunAPIWithUserAgent(url, %q) unexpected User-Agent header. got=%s want=%s", test.ua, got, test.ua)
+				}
+				if test.cloudProps != nil && test.cloudProps.ProjectID != "" {
+					if got := r.Header.Get("X-Goog-User-Project"); got != test.cloudProps.ProjectID {
+						t.Errorf("requestCloudRunAPIWithUserAgent(url, %q) unexpected X-Goog-User-Project header. got=%s want=%s", test.ua, got, test.cloudProps.ProjectID)
+					}
+				}
+			}))
+			defer ts.Close()
+
+			url := ts.URL
+			if test.url != "" {
+				url = test.url
+			}
+			l := NewLogger(defaultAgentProps, test.cloudProps, defaultTimeSource, []string{testProjectNumber})
+			l.clientForTest = ts.Client()
+			if got := l.requestCloudRunAPIWithUserAgent(url, test.ua); !cmp.Equal(got, test.want, cmpopts.EquateErrors()) {
+				t.Errorf("requestCloudRunAPIWithUserAgent(%q, %q) got err=%v want err=%v", url, test.ua, got, test.want)
 			}
 		})
 	}
@@ -367,6 +432,36 @@ func TestBuildComputeURL(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			if got := buildComputeURL(test.cloudProps); got != test.want {
 				t.Errorf("buildComputeURL(%v) got=%s want=%s", test.cloudProps, got, test.want)
+			}
+		})
+	}
+}
+
+func TestBuildRunURL(t *testing.T) {
+	tests := []struct {
+		name       string
+		cloudProps *CloudProperties
+		want       string
+	}{
+		{
+			name: "withCloudProperties",
+			cloudProps: &CloudProperties{
+				ProjectID: "test-project",
+				Region:    "test-region",
+				JobName:   "test-job",
+			},
+			want: "https://run.googleapis.com/v1/projects/test-project/locations/test-region/jobs/test-job",
+		},
+		{
+			name: "withoutCloudProperties",
+			want: "https://run.googleapis.com/v1/projects/unknown/locations/unknown/jobs/unknown",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := buildRunURL(test.cloudProps); got != test.want {
+				t.Errorf("buildRunURL(%v) got=%s want=%s", test.cloudProps, got, test.want)
 			}
 		})
 	}
@@ -435,6 +530,18 @@ func TestSetCloudProperties(t *testing.T) {
 				ProjectNumber: testProjectNumber,
 			},
 			wantImage:         "rhel-8-v20220101",
+			wantIsTestProject: true,
+		},
+		{
+			name: "cloudRun",
+			cloudProps: &CloudProperties{
+				ProjectID:     "test-project",
+				ProjectNumber: testProjectNumber,
+				Platform:      metadataserver.PlatformCloudRun,
+				Region:        "test-region",
+				JobName:       "test-job",
+			},
+			wantImage:         metadataserver.ImageUnknown,
 			wantIsTestProject: true,
 		},
 	}
