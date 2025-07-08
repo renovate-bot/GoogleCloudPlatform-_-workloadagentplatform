@@ -35,6 +35,8 @@ message AgentStatus {
   string agent_name = 10;
   State cloud_api_access_full_scopes_granted = 11;
   KernelVersion kernel_version = 12;
+  string instance_uri =
+      13;  // Format: projects/<project>/zones/<zone>/instances/<instance>
 }
 
 message ServiceStatus {
