@@ -517,3 +517,28 @@ func (g *GCE) GetNetwork(name, project string) (*compute.Network, error) {
 func (g *GCE) GetSubnetwork(name, project, region string) (*compute.Subnetwork, error) {
 	return g.service.Subnetworks.Get(project, region, name).Do()
 }
+
+// GetInstanceCPUAndMemorySize returns the CPU and memory size of the instance.
+func (g *GCE) GetInstanceCPUAndMemorySize(ctx context.Context, project, zone, instanceName string) (int64, int64, error) {
+	instance, err := g.service.Instances.Get(project, zone, instanceName).Context(ctx).Do()
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to get instance %s in project %s, zone %s: %w", instanceName, project, zone, err)
+	}
+
+	machineTypeURL := instance.MachineType
+	if machineTypeURL == "" {
+		return 0, 0, fmt.Errorf("instance.MachineType field is empty")
+	}
+
+	// Extract machine type name from the URL
+	// Example URL: https://www.googleapis.com/compute/v1/projects/my-project/zones/us-central1-a/machineTypes/n1-standard-1
+	machineTypeName := machineTypeURL[strings.LastIndex(machineTypeURL, "/")+1:]
+
+	// Get the machine type details
+	machineType, err := g.service.MachineTypes.Get(project, zone, machineTypeName).Context(ctx).Do()
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to get machine type %s: %w", machineTypeName, err)
+	}
+
+	return machineType.GuestCpus, machineType.MemoryMb, nil
+}
