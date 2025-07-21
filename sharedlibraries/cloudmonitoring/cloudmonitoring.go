@@ -144,17 +144,16 @@ func QueryTimeSeriesWithRetry(ctx context.Context, client TimeSeriesQuerier, req
 		var err error
 		res, err = client.QueryTimeSeries(ctx, req)
 		if err != nil {
-			if strings.Contains(err.Error(), "PermissionDenied") {
-				log.CtxLogger(ctx).Warnw("Error in QueryTimeSeries, Permission denied - Enable the Monitoring Viewer IAM role for the Service Account", "attempt", attempt, "error", err)
-			} else {
-				log.CtxLogger(ctx).Warnw("Error in QueryTimeSeries", "attempt", attempt, "error", err)
-			}
 			attempt++
 		}
 		return err
 	}, LongExponentialBackOffPolicy(ctx, bo.LongExponential, 4, time.Minute, 15*time.Second))
 	if err != nil {
-		log.CtxLogger(ctx).Errorw("QueryTimeSeries retry limit exceeded", "request", req, "error", err, "attempt", attempt)
+		if strings.Contains(err.Error(), "PermissionDenied") {
+			log.CtxLogger(ctx).Errorw("Error in QueryTimeSeries, Permission denied - Enable the Monitoring Viewer IAM role for the Service Account", "request", req, "error", err, "attempt", attempt)
+		} else {
+			log.CtxLogger(ctx).Errorw("QueryTimeSeries retry limit exceeded", "request", req, "error", err, "attempt", attempt)
+		}
 		return nil, err
 	}
 	return res, nil
