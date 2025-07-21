@@ -19,7 +19,7 @@ require (
   github.com/natefinch/lumberjack v2.0.0+incompatible
   github.com/pkg/errors v0.9.1
   go.uber.org/zap v1.27.0
-  golang.org/x/oauth2 v0.26.0
+  golang.org/x/oauth2 v0.27.0
   google.golang.org/api v0.220.0
   google.golang.org/genproto v0.0.0-20250204164813-702378808489
   google.golang.org/genproto/googleapis/api v0.0.0-20250204164813-702378808489
