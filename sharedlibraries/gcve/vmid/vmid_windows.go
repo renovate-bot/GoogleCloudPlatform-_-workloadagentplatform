@@ -18,6 +18,7 @@ limitations under the License.
 package vmid
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -25,6 +26,9 @@ import (
 	"github.com/pborman/uuid"
 	"github.com/yusufpapurcu/wmi"
 )
+
+// ErrIsNotGCVE is returned when the VM is not a GCVE VM.
+var ErrIsNotGCVE = errors.New("VM is not a GCVE VM")
 
 const vmWareSerialNumberPrefix = "VMware"
 const removalRegex = `[-\s]` // Used to remove whitespace and hyphens
@@ -71,7 +75,7 @@ func serialNumber() (string, error) {
 // extractUUID extracts the UUID from the serial number of a GCVE VM.
 func extractUUID(serialNumber string) (string, error) {
 	if !strings.HasPrefix(serialNumber, vmWareSerialNumberPrefix) {
-		return serialNumber, fmt.Errorf("serial number does not have prefix %s", vmWareSerialNumberPrefix)
+		return serialNumber, fmt.Errorf("%w: serial number does not have prefix %s", ErrIsNotGCVE, vmWareSerialNumberPrefix)
 	}
 	serialNumber = strings.TrimPrefix(serialNumber, vmWareSerialNumberPrefix)
 	return regexp.MustCompile(removalRegex).ReplaceAllString(serialNumber, ""), nil

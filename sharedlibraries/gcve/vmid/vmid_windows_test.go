@@ -21,6 +21,7 @@ package vmid
 import (
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
@@ -30,43 +31,43 @@ func TestGetVMID(t *testing.T) {
 		queryErr    error
 		queryResult []Win32_BIOS
 		wantVMID    string
-		wantErr     bool
+		wantErr     error
 	}{
 		{
 			name:        "success",
 			queryResult: []Win32_BIOS{Win32_BIOS{SerialNumber: "VMware-01 23 45 67 89 ab cd ef-01 23 45 67 89 ab cd ef"}},
 			wantVMID:    "01234567-89ab-cdef-0123-456789abcdef",
-			wantErr:     false,
+			wantErr:     nil,
 		},
 		{
 			name:     "query_error",
 			queryErr: cmpopts.AnyError,
 			wantVMID: "",
-			wantErr:  true,
+			wantErr:  cmpopts.AnyError,
 		},
 		{
 			name:        "empty_query_result",
 			queryResult: []Win32_BIOS{},
 			wantVMID:    "",
-			wantErr:     true,
+			wantErr:     cmpopts.AnyError,
 		},
 		{
 			name:        "empty_serial_number",
 			queryResult: []Win32_BIOS{Win32_BIOS{}},
 			wantVMID:    "",
-			wantErr:     true,
+			wantErr:     cmpopts.AnyError,
 		},
 		{
 			name:        "unexpected_prefix",
 			queryResult: []Win32_BIOS{Win32_BIOS{SerialNumber: "GoogleCloud-0123456789ABCDEF0123456789ABCDEF"}},
 			wantVMID:    "",
-			wantErr:     true,
+			wantErr:     ErrIsNotGCVE,
 		},
 		{
 			name:        "parsing_error",
 			queryResult: []Win32_BIOS{Win32_BIOS{SerialNumber: "VMware-01 23 45 67 89 ab cd ef-01 23"}},
 			wantVMID:    "",
-			wantErr:     true,
+			wantErr:     cmpopts.AnyError,
 		},
 	}
 
@@ -81,11 +82,8 @@ func TestGetVMID(t *testing.T) {
 			gotVMID, err := VMID()
 
 			// Validate
-			if err != nil && !tc.wantErr {
-				t.Errorf("VMID() returned an unexpected error: %v", err)
-			}
-			if err == nil && tc.wantErr {
-				t.Errorf("VMID() did not return an error, but an error was expected")
+			if !cmp.Equal(err, tc.wantErr, cmpopts.EquateErrors()) {
+				t.Errorf("VMID() got error: %v, want: %v", err, tc.wantErr)
 			}
 			if gotVMID != tc.wantVMID {
 				t.Errorf("VMID() = %s, want: %s", gotVMID, tc.wantVMID)
