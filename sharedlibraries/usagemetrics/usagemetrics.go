@@ -332,7 +332,7 @@ func buildComputeURL(cp *CloudProperties) string {
 
 // buildRunURL returns a Cloud Run Admin API URL for the specified job.
 func buildRunURL(cp *CloudProperties) string {
-	runAPIURL := "https://run.googleapis.com/v1/projects/%s/locations/%s/jobs/%s"
+	runAPIURL := "https://run.googleapis.com/v2/projects/%s/locations/%s/jobs/%s"
 	if cp == nil {
 		return fmt.Sprintf(runAPIURL, "unknown", "unknown", "unknown")
 	}

@@ -450,11 +450,11 @@ func TestBuildRunURL(t *testing.T) {
 				Region:    "test-region",
 				JobName:   "test-job",
 			},
-			want: "https://run.googleapis.com/v1/projects/test-project/locations/test-region/jobs/test-job",
+			want: "https://run.googleapis.com/v2/projects/test-project/locations/test-region/jobs/test-job",
 		},
 		{
 			name: "withoutCloudProperties",
-			want: "https://run.googleapis.com/v1/projects/unknown/locations/unknown/jobs/unknown",
+			want: "https://run.googleapis.com/v2/projects/unknown/locations/unknown/jobs/unknown",
 		},
 	}
 
