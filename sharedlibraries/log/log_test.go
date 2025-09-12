@@ -21,6 +21,7 @@ import (
 
 	"cloud.google.com/go/logging"
 	"github.com/google/go-cmp/cmp"
+	"github.com/natefinch/lumberjack"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -100,11 +101,16 @@ func TestLogLevelStringToZapcore(t *testing.T) {
 func TestSetupLogging(t *testing.T) {
 	wantLevel := "warn"
 	wantLogFile := "log-file"
+	wantAdditionalLogFiles := []string{"extra-log-1", "extra-log-2"}
 	SetupLogging(Parameters{
 		Level:              zapcore.WarnLevel,
 		LogFileName:        "log-file",
 		LogToCloud:         true,
 		CloudLoggingClient: &logging.Client{},
+		AdditionalLogFiles: []File{
+			{Level: zapcore.DebugLevel, Logger: &lumberjack.Logger{Filename: "extra-log-1"}},
+			{Level: zapcore.ErrorLevel, Logger: &lumberjack.Logger{Filename: "extra-log-2"}},
+		},
 	})
 	got := GetLevel()
 	if got != wantLevel {
@@ -114,6 +120,10 @@ func TestSetupLogging(t *testing.T) {
 	got = GetLogFile()
 	if got != wantLogFile {
 		t.Errorf("TestSetupLogging() logFile is incorrect, got: %s, want: %s", got, wantLogFile)
+	}
+
+	if cmp.Diff(wantAdditionalLogFiles, AdditionalLogFiles()) != "" {
+		t.Errorf("TestSetupLogging() additionalLogFiles is incorrect, diff (-want +got): %v", cmp.Diff(wantAdditionalLogFiles, AdditionalLogFiles()))
 	}
 }
 

@@ -73,6 +73,7 @@ var (
 	Logger           *zap.SugaredLogger
 	level            string
 	logfile          string
+	additionalLogFiles []string
 	cloudCore        *CloudCore
 	constructionLock sync.Mutex
 
@@ -90,6 +91,12 @@ type (
 		LogFileName        string
 		LogFilePath        string
 		CloudLogName       string
+		AdditionalLogFiles []File
+	}
+	// File represents a log file to be written to.
+	File struct {
+		Level zapcore.Level
+		Logger *lumberjack.Logger
 	}
 	cloudWriter struct {
 		w io.Writer
@@ -155,6 +162,7 @@ func DefaultOTEPath(agentName string, osType string, logFilePath string) string 
 func SetupLogging(params Parameters) {
 	level = params.Level.String()
 	logfile = params.LogFileName
+	additionalLogFiles = nil
 	config := zap.NewProductionEncoderConfig()
 	config.EncodeTime = zapcore.ISO8601TimeEncoder
 	config.TimeKey = "timestamp"
@@ -188,6 +196,12 @@ func SetupLogging(params Parameters) {
 			zapcore.NewCore(logEncoder, fileOrPrintLogWriter, params.Level),
 		)
 	}
+	// Attach additional log files to the core.
+	for _, file := range params.AdditionalLogFiles {
+		logWriter := zapcore.AddSync(file.Logger)
+		core = zapcore.NewTee(core, zapcore.NewCore(logEncoder, logWriter, file.Level))
+		additionalLogFiles = append(additionalLogFiles, file.Logger.Filename)
+	}
 	coreLogger := zap.New(core, zap.AddCaller()).With(zap.Int("pid", os.Getpid()))
 	defer coreLogger.Sync()
 	// we use the sugared logger to allow for simpler field and message additions to logs
@@ -219,6 +233,7 @@ func SetupLoggingForTest() {
 	logger, _ := zap.NewDevelopment()
 	level = zapcore.DebugLevel.String()
 	logfile = ""
+	additionalLogFiles = nil
 	defer logger.Sync() // flushes buffer, if any
 	Logger = logger.Sugar()
 }
@@ -245,6 +260,7 @@ func SetupLoggingToDiscard() {
 	defer constructionLock.Unlock()
 	level = ""
 	logfile = ""
+	additionalLogFiles = nil
 	config := zap.NewProductionEncoderConfig()
 	config.EncodeTime = zapcore.ISO8601TimeEncoder
 	fileEncoder := zapcore.NewJSONEncoder(config)
@@ -309,6 +325,11 @@ func GetLevel() string {
 // GetLogFile will return the current logfile as a string.
 func GetLogFile() string {
 	return logfile
+}
+
+// AdditionalLogFiles will return the additional log files.
+func AdditionalLogFiles() []string {
+	return additionalLogFiles
 }
 
 // Error creates a zap Field for an error.
