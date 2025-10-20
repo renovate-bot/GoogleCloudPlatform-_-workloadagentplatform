@@ -141,7 +141,7 @@ func OTEFilePath(agentName string, oteName string, osType string, logFilePath st
 		LogFileName = fmt.Sprintf("%s%s.log", logFilePath, logName)
 	}
 	if osType == "windows" {
-		LogFileName = fmt.Sprintf(`C:\Program Files\Google\%s\logs\%s.log`, agentName, logName)
+		LogFileName = fmt.Sprintf(`%s\Google\%s\logs\%s.log`, CreateWindowsLogBasePath(), agentName, logName)
 		if logFilePath != "" {
 			if !strings.HasSuffix(logFilePath, `\`) {
 				logFilePath = logFilePath + `\`
