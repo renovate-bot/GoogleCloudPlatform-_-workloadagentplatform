@@ -47,7 +47,14 @@ func (r *RecoverableRoutine) StartRoutine(ctx context.Context) {
 		r.Backoff = backoff.NewExponentialBackOff()
 	}
 
-	rName := runtime.FuncForPC(reflect.ValueOf(r.Routine).Pointer()).Name()
+	f := runtime.FuncForPC(reflect.ValueOf(r.Routine).Pointer())
+	if f == nil {
+		log.CtxLogger(ctx).Warn("Failed to get function for routine")
+		return
+	}
+	rName := f.Name()
+	_, rLine := f.FileLine(f.Entry())
+
 	go backoff.Retry(func() (err error) {
 		routineCtx, cancel := context.WithCancel(ctx)
 		defer func() {
@@ -67,7 +74,7 @@ func (r *RecoverableRoutine) StartRoutine(ctx context.Context) {
 				cancel()
 			}
 		}()
-		log.CtxLogger(routineCtx).Debugw("Starting routine", "routine", rName)
+		log.CtxLogger(routineCtx).Debugw("Starting routine", "routine", rName, "function definition line", rLine)
 		r.lastRestart = time.Now()
 		r.Routine(routineCtx, r.RoutineArg)
 		return nil
