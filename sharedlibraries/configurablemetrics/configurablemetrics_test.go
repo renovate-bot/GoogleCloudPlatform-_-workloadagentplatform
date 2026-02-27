@@ -269,12 +269,83 @@ func TestCollectMetricsFromFile(t *testing.T) {
 	}
 }
 
+func TestCollectEvalMetricsFromFile(t *testing.T) {
+	tests := []struct {
+		name       string
+		reader     FileReader
+		path       string
+		metrics    []*cmpb.EvalMetric
+		ignoreCase bool
+		want       map[string]string
+	}{
+		{
+			name: "EmptyMetrics",
+			want: map[string]string{},
+		},
+		{
+			name: "FileReadError",
+			metrics: []*cmpb.EvalMetric{
+				andEvalMetricIfTrue(&cmpb.EvalResult{
+					EvalResultTypes: &cmpb.EvalResult_ValueFromLiteral{ValueFromLiteral: "Literal Value"},
+				}),
+			},
+			reader: FileReader(func(data string) (io.ReadCloser, error) {
+				return nil, errors.New("error")
+			}),
+			want: map[string]string{
+				"foo": "",
+			},
+		},
+		{
+			name: "Success",
+			metrics: []*cmpb.EvalMetric{
+				andEvalMetricIfTrue(&cmpb.EvalResult{
+					EvalResultTypes: &cmpb.EvalResult_ValueFromLiteral{ValueFromLiteral: "Literal Value"},
+				}),
+			},
+			reader: FileReader(func(data string) (io.ReadCloser, error) {
+				return io.NopCloser(strings.NewReader(data)), nil
+			}),
+			path: "foobar",
+			want: map[string]string{
+				"foo": "Literal Value",
+			},
+		},
+		{
+			name: "Success_IgnoreCase",
+			metrics: []*cmpb.EvalMetric{
+				andEvalMetricIfTrue(&cmpb.EvalResult{
+					EvalResultTypes: &cmpb.EvalResult_ValueFromLiteral{ValueFromLiteral: "Literal Value"},
+				}),
+			},
+			reader: FileReader(func(data string) (io.ReadCloser, error) {
+				return io.NopCloser(strings.NewReader(data)), nil
+			}),
+			path:       "FOOBAR",
+			ignoreCase: true,
+			want: map[string]string{
+				"foo": "Literal Value",
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := CollectEvalMetricsFromFile(t.Context(), test.reader, test.path, test.metrics, test.ignoreCase)
+			if diff := cmp.Diff(test.want, got); diff != "" {
+				t.Errorf("CollectMetricsFromFile(%v) mismatch (-want, +got):\n%s", test.metrics, diff)
+			}
+		})
+	}
+}
+
 func TestEvaluate(t *testing.T) {
 	tests := []struct {
 		name       string
 		metric     *cmpb.EvalMetric
 		output     Output
 		wantValue  string
+		ignoreCase bool
 		wantResult bool
 	}{
 		{
@@ -285,7 +356,7 @@ func TestEvaluate(t *testing.T) {
 			wantResult: false,
 		},
 		{
-			name: "EvalRule_OutputEquals",
+			name: "EvalRule_OutputEquals_True",
 			metric: andEvalMetricWithRules([]*cmpb.EvalRule{
 				&cmpb.EvalRule{
 					EvalRuleTypes: &cmpb.EvalRule_OutputEquals{OutputEquals: "foobar"},
@@ -296,18 +367,80 @@ func TestEvaluate(t *testing.T) {
 			wantResult: true,
 		},
 		{
-			name: "EvalRule_OutputNotEquals",
+			name: "EvalRule_OutputEquals_False",
 			metric: andEvalMetricWithRules([]*cmpb.EvalRule{
 				&cmpb.EvalRule{
-					EvalRuleTypes: &cmpb.EvalRule_OutputNotEquals{OutputNotEquals: "foobar"},
+					EvalRuleTypes: &cmpb.EvalRule_OutputEquals{OutputEquals: "FOObar"},
 				},
 			}),
-			output:     Output{StdOut: "not foobar"},
+			output:     Output{StdOut: "fooBAR"},
+			wantValue:  "Value is false",
+			wantResult: false,
+		},
+		{
+			name: "EvalRule_OutputEquals_IgnoreCase_True",
+			metric: andEvalMetricWithRules([]*cmpb.EvalRule{&cmpb.EvalRule{
+				EvalRuleTypes: &cmpb.EvalRule_OutputEquals{OutputEquals: "FOObar"},
+			}}),
+			output:     Output{StdOut: "fooBAR"},
+			ignoreCase: true,
 			wantValue:  "Value is true",
 			wantResult: true,
 		},
 		{
-			name: "EvalRule_OutputLessThan",
+			name: "EvalRule_OutputEquals_IgnoreCase_False",
+			metric: andEvalMetricWithRules([]*cmpb.EvalRule{&cmpb.EvalRule{
+				EvalRuleTypes: &cmpb.EvalRule_OutputEquals{OutputEquals: "FOObar"},
+			}}),
+			output:     Output{StdOut: "fooBAZ"},
+			ignoreCase: true,
+			wantValue:  "Value is false",
+			wantResult: false,
+		},
+		{
+			name: "EvalRule_OutputNotEquals_True",
+			metric: andEvalMetricWithRules([]*cmpb.EvalRule{
+				&cmpb.EvalRule{
+					EvalRuleTypes: &cmpb.EvalRule_OutputNotEquals{OutputNotEquals: "FOObar"},
+				},
+			}),
+			output:     Output{StdOut: "fooBAR"},
+			wantValue:  "Value is true",
+			wantResult: true,
+		},
+		{
+			name: "EvalRule_OutputNotEquals_False",
+			metric: andEvalMetricWithRules([]*cmpb.EvalRule{
+				&cmpb.EvalRule{
+					EvalRuleTypes: &cmpb.EvalRule_OutputNotEquals{OutputNotEquals: "FOOBAR"},
+				},
+			}),
+			output:     Output{StdOut: "FOOBAR"},
+			wantValue:  "Value is false",
+			wantResult: false,
+		},
+		{
+			name: "EvalRule_OutputNotEquals_IgnoreCase_True",
+			metric: andEvalMetricWithRules([]*cmpb.EvalRule{&cmpb.EvalRule{
+				EvalRuleTypes: &cmpb.EvalRule_OutputNotEquals{OutputNotEquals: "FOObar"},
+			}}),
+			output:     Output{StdOut: "fooBAZ"},
+			ignoreCase: true,
+			wantValue:  "Value is true",
+			wantResult: true,
+		},
+		{
+			name: "EvalRule_OutputNotEquals_IgnoreCase_False",
+			metric: andEvalMetricWithRules([]*cmpb.EvalRule{&cmpb.EvalRule{
+				EvalRuleTypes: &cmpb.EvalRule_OutputNotEquals{OutputNotEquals: "FOObar"},
+			}}),
+			output:     Output{StdOut: "fooBAR"},
+			ignoreCase: true,
+			wantValue:  "Value is false",
+			wantResult: false,
+		},
+		{
+			name: "EvalRule_OutputLessThan_True",
 			metric: andEvalMetricWithRules([]*cmpb.EvalRule{
 				&cmpb.EvalRule{
 					EvalRuleTypes: &cmpb.EvalRule_OutputLessThan{OutputLessThan: 100},
@@ -316,6 +449,17 @@ func TestEvaluate(t *testing.T) {
 			output:     Output{StdOut: "99"},
 			wantValue:  "Value is true",
 			wantResult: true,
+		},
+		{
+			name: "EvalRule_OutputLessThan_False",
+			metric: andEvalMetricWithRules([]*cmpb.EvalRule{
+				&cmpb.EvalRule{
+					EvalRuleTypes: &cmpb.EvalRule_OutputLessThan{OutputLessThan: 100},
+				},
+			}),
+			output:     Output{StdOut: "101"},
+			wantValue:  "Value is false",
+			wantResult: false,
 		},
 		{
 			name: "EvalRule_OutputLessThan_FailsToParse",
@@ -329,7 +473,7 @@ func TestEvaluate(t *testing.T) {
 			wantResult: false,
 		},
 		{
-			name: "EvalRule_OutputLessThanOrEqual",
+			name: "EvalRule_OutputLessThanOrEqual_True",
 			metric: andEvalMetricWithRules([]*cmpb.EvalRule{
 				&cmpb.EvalRule{
 					EvalRuleTypes: &cmpb.EvalRule_OutputLessThanOrEqual{OutputLessThanOrEqual: 100},
@@ -338,6 +482,17 @@ func TestEvaluate(t *testing.T) {
 			output:     Output{StdOut: "100"},
 			wantValue:  "Value is true",
 			wantResult: true,
+		},
+		{
+			name: "EvalRule_OutputLessThanOrEqual_False",
+			metric: andEvalMetricWithRules([]*cmpb.EvalRule{
+				&cmpb.EvalRule{
+					EvalRuleTypes: &cmpb.EvalRule_OutputLessThanOrEqual{OutputLessThanOrEqual: 100},
+				},
+			}),
+			output:     Output{StdOut: "101"},
+			wantValue:  "Value is false",
+			wantResult: false,
 		},
 		{
 			name: "EvalRule_OutputLessThanOrEqual_FailsToParse",
@@ -351,7 +506,7 @@ func TestEvaluate(t *testing.T) {
 			wantResult: false,
 		},
 		{
-			name: "EvalRule_OutputGreaterThan",
+			name: "EvalRule_OutputGreaterThan_True",
 			metric: andEvalMetricWithRules([]*cmpb.EvalRule{
 				&cmpb.EvalRule{
 					EvalRuleTypes: &cmpb.EvalRule_OutputGreaterThan{OutputGreaterThan: 99},
@@ -360,6 +515,17 @@ func TestEvaluate(t *testing.T) {
 			output:     Output{StdOut: "100"},
 			wantValue:  "Value is true",
 			wantResult: true,
+		},
+		{
+			name: "EvalRule_OutputGreaterThan_False",
+			metric: andEvalMetricWithRules([]*cmpb.EvalRule{
+				&cmpb.EvalRule{
+					EvalRuleTypes: &cmpb.EvalRule_OutputGreaterThan{OutputGreaterThan: 100},
+				},
+			}),
+			output:     Output{StdOut: "100"},
+			wantValue:  "Value is false",
+			wantResult: false,
 		},
 		{
 			name: "EvalRule_OutputGreaterThan_FailsToParse",
@@ -373,7 +539,7 @@ func TestEvaluate(t *testing.T) {
 			wantResult: false,
 		},
 		{
-			name: "EvalRule_OutputGreaterThanOrEqual",
+			name: "EvalRule_OutputGreaterThanOrEqual_True",
 			metric: andEvalMetricWithRules([]*cmpb.EvalRule{
 				&cmpb.EvalRule{
 					EvalRuleTypes: &cmpb.EvalRule_OutputGreaterThanOrEqual{OutputGreaterThanOrEqual: 100},
@@ -382,6 +548,17 @@ func TestEvaluate(t *testing.T) {
 			output:     Output{StdOut: "100"},
 			wantValue:  "Value is true",
 			wantResult: true,
+		},
+		{
+			name: "EvalRule_OutputGreaterThanOrEqual_False",
+			metric: andEvalMetricWithRules([]*cmpb.EvalRule{
+				&cmpb.EvalRule{
+					EvalRuleTypes: &cmpb.EvalRule_OutputGreaterThanOrEqual{OutputGreaterThanOrEqual: 100},
+				},
+			}),
+			output:     Output{StdOut: "99"},
+			wantValue:  "Value is false",
+			wantResult: false,
 		},
 		{
 			name: "EvalRule_OutputGreaterThanOrEqual_FailsToParse",
@@ -395,7 +572,7 @@ func TestEvaluate(t *testing.T) {
 			wantResult: false,
 		},
 		{
-			name: "EvalRule_OutputStartsWith",
+			name: "EvalRule_OutputStartsWith_True",
 			metric: andEvalMetricWithRules([]*cmpb.EvalRule{
 				&cmpb.EvalRule{
 					EvalRuleTypes: &cmpb.EvalRule_OutputStartsWith{OutputStartsWith: "foobar"},
@@ -406,7 +583,42 @@ func TestEvaluate(t *testing.T) {
 			wantResult: true,
 		},
 		{
-			name: "EvalRule_OutputEndsWith",
+			name: "EvalRule_OutputStartsWith_False",
+			metric: andEvalMetricWithRules([]*cmpb.EvalRule{
+				&cmpb.EvalRule{
+					EvalRuleTypes: &cmpb.EvalRule_OutputStartsWith{OutputStartsWith: "foobar"},
+				},
+			}),
+			output:     Output{StdOut: "FOOBAR at the start"},
+			wantValue:  "Value is false",
+			wantResult: false,
+		},
+		{
+			name: "EvalRule_OutputStartsWith_IgnoreCase_True",
+			metric: andEvalMetricWithRules([]*cmpb.EvalRule{
+				&cmpb.EvalRule{
+					EvalRuleTypes: &cmpb.EvalRule_OutputStartsWith{OutputStartsWith: "FOOBAR"},
+				},
+			}),
+			output:     Output{StdOut: "foobar at the start"},
+			ignoreCase: true,
+			wantValue:  "Value is true",
+			wantResult: true,
+		},
+		{
+			name: "EvalRule_OutputStartsWith_IgnoreCase_False",
+			metric: andEvalMetricWithRules([]*cmpb.EvalRule{
+				&cmpb.EvalRule{
+					EvalRuleTypes: &cmpb.EvalRule_OutputStartsWith{OutputStartsWith: "FOOBAR"},
+				},
+			}),
+			output:     Output{StdOut: "FOOBAZ at the start"},
+			ignoreCase: true,
+			wantValue:  "Value is false",
+			wantResult: false,
+		},
+		{
+			name: "EvalRule_OutputEndsWith_True",
 			metric: andEvalMetricWithRules([]*cmpb.EvalRule{
 				&cmpb.EvalRule{
 					EvalRuleTypes: &cmpb.EvalRule_OutputEndsWith{OutputEndsWith: "foobar"},
@@ -417,7 +629,42 @@ func TestEvaluate(t *testing.T) {
 			wantResult: true,
 		},
 		{
-			name: "EvalRule_OutputContains",
+			name: "EvalRule_OutputEndsWith_False",
+			metric: andEvalMetricWithRules([]*cmpb.EvalRule{
+				&cmpb.EvalRule{
+					EvalRuleTypes: &cmpb.EvalRule_OutputEndsWith{OutputEndsWith: "foobar"},
+				},
+			}),
+			output:     Output{StdOut: "at the end is FOOBAR"},
+			wantValue:  "Value is false",
+			wantResult: false,
+		},
+		{
+			name: "EvalRule_OutputEndsWith_IgnoreCase_True",
+			metric: andEvalMetricWithRules([]*cmpb.EvalRule{
+				&cmpb.EvalRule{
+					EvalRuleTypes: &cmpb.EvalRule_OutputEndsWith{OutputEndsWith: "FOOBAR"},
+				},
+			}),
+			output:     Output{StdOut: "at the end is foobar"},
+			ignoreCase: true,
+			wantValue:  "Value is true",
+			wantResult: true,
+		},
+		{
+			name: "EvalRule_OutputEndsWith_IgnoreCase_False",
+			metric: andEvalMetricWithRules([]*cmpb.EvalRule{
+				&cmpb.EvalRule{
+					EvalRuleTypes: &cmpb.EvalRule_OutputEndsWith{OutputEndsWith: "FOOBAR"},
+				},
+			}),
+			output:     Output{StdOut: "at the end is FOOBAZ"},
+			ignoreCase: true,
+			wantValue:  "Value is false",
+			wantResult: false,
+		},
+		{
+			name: "EvalRule_OutputContains_True",
 			metric: andEvalMetricWithRules([]*cmpb.EvalRule{
 				&cmpb.EvalRule{
 					EvalRuleTypes: &cmpb.EvalRule_OutputContains{OutputContains: "foobar"},
@@ -428,15 +675,85 @@ func TestEvaluate(t *testing.T) {
 			wantResult: true,
 		},
 		{
-			name: "EvalRule_OutputNotContains",
+			name: "EvalRule_OutputContains_False",
+			metric: andEvalMetricWithRules([]*cmpb.EvalRule{
+				&cmpb.EvalRule{
+					EvalRuleTypes: &cmpb.EvalRule_OutputContains{OutputContains: "foobar"},
+				},
+			}),
+			output:     Output{StdOut: "start FOOBAR end"},
+			wantValue:  "Value is false",
+			wantResult: false,
+		},
+		{
+			name: "EvalRule_OutputContains_IgnoreCase_True",
+			metric: andEvalMetricWithRules([]*cmpb.EvalRule{
+				&cmpb.EvalRule{
+					EvalRuleTypes: &cmpb.EvalRule_OutputContains{OutputContains: "FOOBAR"},
+				},
+			}),
+			output:     Output{StdOut: "start foobar end"},
+			ignoreCase: true,
+			wantValue:  "Value is true",
+			wantResult: true,
+		},
+		{
+			name: "EvalRule_OutputContains_IgnoreCase_False",
+			metric: andEvalMetricWithRules([]*cmpb.EvalRule{
+				&cmpb.EvalRule{
+					EvalRuleTypes: &cmpb.EvalRule_OutputContains{OutputContains: "FOOBAR"},
+				},
+			}),
+			output:     Output{StdOut: "start FOOBAZ end"},
+			ignoreCase: true,
+			wantValue:  "Value is false",
+			wantResult: false,
+		},
+		{
+			name: "EvalRule_OutputNotContains_True",
 			metric: andEvalMetricWithRules([]*cmpb.EvalRule{
 				&cmpb.EvalRule{
 					EvalRuleTypes: &cmpb.EvalRule_OutputNotContains{OutputNotContains: "foobar"},
 				},
 			}),
-			output:     Output{StdOut: "start foobaz end"},
+			output:     Output{StdOut: "start FOOBAR end"},
 			wantValue:  "Value is true",
 			wantResult: true,
+		},
+		{
+			name: "EvalRule_OutputNotContains_False",
+			metric: andEvalMetricWithRules([]*cmpb.EvalRule{
+				&cmpb.EvalRule{
+					EvalRuleTypes: &cmpb.EvalRule_OutputNotContains{OutputNotContains: "foobar"},
+				},
+			}),
+			output:     Output{StdOut: "start foobar end"},
+			wantValue:  "Value is false",
+			wantResult: false,
+		},
+		{
+			name: "EvalRule_OutputNotContains_IgnoreCase_True",
+			metric: andEvalMetricWithRules([]*cmpb.EvalRule{
+				&cmpb.EvalRule{
+					EvalRuleTypes: &cmpb.EvalRule_OutputNotContains{OutputNotContains: "FOOBAR"},
+				},
+			}),
+			output:     Output{StdOut: "start foobaz end"},
+			ignoreCase: true,
+			wantValue:  "Value is true",
+			wantResult: true,
+		},
+		{
+			name: "EvalRule_OutputNotContains_IgnoreCase_False",
+			metric: andEvalMetricWithRules([]*cmpb.EvalRule{
+				&cmpb.EvalRule{
+					EvalRuleTypes: &cmpb.EvalRule_OutputNotContains{OutputNotContains: "FOOBAR"},
+				},
+			}),
+			output:     Output{StdOut: "start foobar end"},
+			ignoreCase: true,
+			wantValue:  "Value is false",
+			wantResult: false,
 		},
 		{
 			name: "EvalRule_Missing",
@@ -659,7 +976,7 @@ func TestEvaluate(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			gotValue, gotResult := Evaluate(context.Background(), test.metric, test.output)
+			gotValue, gotResult := Evaluate(t.Context(), test.metric, test.output, test.ignoreCase)
 			if gotValue != test.wantValue {
 				t.Errorf("Evaluate() returned unexpected value got %s want %s", gotValue, test.wantValue)
 			}

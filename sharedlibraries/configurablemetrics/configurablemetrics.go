@@ -81,13 +81,29 @@ func CollectOSCommandMetric(ctx context.Context, m *cmpb.OSCommandMetric, exec c
 		StdOut:   strings.TrimSpace(result.StdOut),
 		StdErr:   strings.TrimSpace(result.StdErr),
 		ExitCode: strconv.Itoa(result.ExitCode),
-	})
+	}, false)
 	return label, value
 }
 
 // CollectMetricsFromFile scans a configuration file and returns a map
 // of collected metric values, keyed by metric label.
+//
+// DEPRECATED: Use CollectEvalMetricsFromFile instead.
 func CollectMetricsFromFile(ctx context.Context, reader FileReader, path string, metrics []*cmpb.EvalMetric) map[string]string {
+	return collectMetricsFromFile(ctx, reader, path, metrics, false)
+}
+
+// CollectEvalMetricsFromFile performs metric collection on a file path and returns the results.
+//
+// Given a file path, scan through each line of the file and evaluate whether
+// it satisfies one or more of the metrics supplied. If so, then the metric
+// value will be set to the result of the evaluation. The `ignoreCase`
+// parameter allows for the evaluations in the file to be case insensitive.
+func CollectEvalMetricsFromFile(ctx context.Context, reader FileReader, path string, metrics []*cmpb.EvalMetric, ignoreCase bool) map[string]string {
+	return collectMetricsFromFile(ctx, reader, path, metrics, ignoreCase)
+}
+
+func collectMetricsFromFile(ctx context.Context, reader FileReader, path string, metrics []*cmpb.EvalMetric, ignoreCase bool) map[string]string {
 	labels := BuildMetricMap(metrics)
 	if len(metrics) == 0 {
 		return labels
@@ -112,7 +128,7 @@ func CollectMetricsFromFile(ctx context.Context, reader FileReader, path string,
 		}
 		line := strings.TrimSpace(scanner.Text())
 		for l, m := range metricsByLabel {
-			v, ok := Evaluate(ctx, m, Output{StdOut: line})
+			v, ok := Evaluate(ctx, m, Output{StdOut: line}, ignoreCase)
 			labels[l] = v
 			// For a result that evaluates as true, do not attempt to collect this metric again.
 			// This assumes that at most one metric will be collected per line scanned.
@@ -133,19 +149,19 @@ func CollectMetricsFromFile(ctx context.Context, reader FileReader, path string,
 // Evaluate runs a series of evaluation rules against an Output source and
 // returns a derived metric value, as well as a boolean indicating whether
 // the evaluation rules were resolved as true or as false.
-func Evaluate[M proto.Message](ctx context.Context, metric M, output Output) (string, bool) {
+func Evaluate[M proto.Message](ctx context.Context, metric M, output Output, ignoreCase bool) (string, bool) {
 	andFD := metric.ProtoReflect().Descriptor().Fields().ByName("and_eval_rules")
 	orFD := metric.ProtoReflect().Descriptor().Fields().ByName("or_eval_rules")
 	if metric.ProtoReflect().Has(andFD) {
 		andEval := metric.ProtoReflect().Get(andFD).Message().Interface().(*cmpb.EvalMetricRule)
-		return andEvaluation(ctx, andEval, output)
-	} else if metric.ProtoReflect().Has(orFD) {
-		orEvals := metric.ProtoReflect().Get(orFD).Message().Interface().(*cmpb.OrEvalMetricRule)
-		return orEvaluation(ctx, orEvals.GetOrEvalRules(), output)
-	} else {
-		log.CtxLogger(ctx).Warnw("No evaluation rules found for metric", "metric", metric)
-		return "", false
+		return andEvaluation(ctx, andEval, output, ignoreCase)
 	}
+	if metric.ProtoReflect().Has(orFD) {
+		orEvals := metric.ProtoReflect().Get(orFD).Message().Interface().(*cmpb.OrEvalMetricRule)
+		return orEvaluation(ctx, orEvals.GetOrEvalRules(), output, ignoreCase)
+	}
+	log.CtxLogger(ctx).Warnw("No evaluation rules found for metric", "metric", metric)
+	return "", false
 }
 
 // andEvaluation returns the results of a logical AND evaluation for a metric.
@@ -153,9 +169,9 @@ func Evaluate[M proto.Message](ctx context.Context, metric M, output Output) (st
 // Each of the evaluation rules must resolve to true for the evaluation result
 // to be considered true. Otherwise, the evaluation result will be reported as
 // false.
-func andEvaluation(ctx context.Context, eval *cmpb.EvalMetricRule, output Output) (string, bool) {
+func andEvaluation(ctx context.Context, eval *cmpb.EvalMetricRule, output Output, ignoreCase bool) (string, bool) {
 	for _, rule := range eval.GetEvalRules() {
-		if result := evaluateRule(ctx, rule, output); result == false {
+		if result := evaluateRule(ctx, rule, output, ignoreCase); result == false {
 			return evaluationResult(ctx, eval.GetIfFalse(), output), false
 		}
 	}
@@ -170,10 +186,10 @@ func andEvaluation(ctx context.Context, eval *cmpb.EvalMetricRule, output Output
 // for the evaluation as a whole to be considered true. If none of the
 // evaluations resolve to true, the result from the last evaluation will be
 // used, and the evaluation will be reported as false.
-func orEvaluation(ctx context.Context, evals []*cmpb.EvalMetricRule, output Output) (string, bool) {
+func orEvaluation(ctx context.Context, evals []*cmpb.EvalMetricRule, output Output, ignoreCase bool) (string, bool) {
 	value := ""
 	for _, eval := range evals {
-		v, ok := andEvaluation(ctx, eval, output)
+		v, ok := andEvaluation(ctx, eval, output, ignoreCase)
 		if ok {
 			return v, true
 		}
@@ -183,12 +199,21 @@ func orEvaluation(ctx context.Context, evals []*cmpb.EvalMetricRule, output Outp
 }
 
 // evaluateRule applies an evaluation rule to a given Output source and returns a boolean result.
-func evaluateRule(ctx context.Context, rule *cmpb.EvalRule, output Output) bool {
+func evaluateRule(ctx context.Context, rule *cmpb.EvalRule, output Output, ignoreCase bool) bool {
 	source := outputSource(output, rule.GetOutputSource())
+	if ignoreCase {
+		source = strings.ToLower(source)
+	}
 	switch rule.GetEvalRuleTypes().(type) {
 	case *cmpb.EvalRule_OutputEquals:
+		if ignoreCase {
+			return strings.ToLower(rule.GetOutputEquals()) == source
+		}
 		return rule.GetOutputEquals() == source
 	case *cmpb.EvalRule_OutputNotEquals:
+		if ignoreCase {
+			return strings.ToLower(rule.GetOutputNotEquals()) != source
+		}
 		return rule.GetOutputNotEquals() != source
 	case *cmpb.EvalRule_OutputLessThan:
 		f, err := strconv.ParseFloat(source, 64)
@@ -219,12 +244,24 @@ func evaluateRule(ctx context.Context, rule *cmpb.EvalRule, output Output) bool 
 		}
 		return f >= rule.GetOutputGreaterThanOrEqual()
 	case *cmpb.EvalRule_OutputStartsWith:
+		if ignoreCase {
+			return strings.HasPrefix(source, strings.ToLower(rule.GetOutputStartsWith()))
+		}
 		return strings.HasPrefix(source, rule.GetOutputStartsWith())
 	case *cmpb.EvalRule_OutputEndsWith:
+		if ignoreCase {
+			return strings.HasSuffix(source, strings.ToLower(rule.GetOutputEndsWith()))
+		}
 		return strings.HasSuffix(source, rule.GetOutputEndsWith())
 	case *cmpb.EvalRule_OutputContains:
+		if ignoreCase {
+			return strings.Contains(source, strings.ToLower(rule.GetOutputContains()))
+		}
 		return strings.Contains(source, rule.GetOutputContains())
 	case *cmpb.EvalRule_OutputNotContains:
+		if ignoreCase {
+			return !strings.Contains(source, strings.ToLower(rule.GetOutputNotContains()))
+		}
 		return !strings.Contains(source, rule.GetOutputNotContains())
 	default:
 		log.CtxLogger(ctx).Debug("No evaluation rule detected, defaulting to false")
@@ -252,7 +289,8 @@ func evaluationResult(ctx context.Context, res *cmpb.EvalResult, output Output) 
 		match := pattern.FindStringSubmatch(source)
 		if len(match) > 1 {
 			return match[1]
-		} else if len(match) > 0 {
+		}
+		if len(match) > 0 {
 			return match[0]
 		}
 		return ""
