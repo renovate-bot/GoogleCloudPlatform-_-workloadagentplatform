@@ -174,7 +174,7 @@ func ExecuteCommand(ctx context.Context, params Params) Result {
 	}
 
 	log.CtxLogger(ctx).Debugw("Executing command", "executable", params.Executable, "args", args,
-		"timeout", timeout, "user", params.User, "env", params.Env, "stdin", params.Stdin)
+		"timeout", timeout, "user", params.User, "env", params.Env)
 
 	if run != nil {
 		err = run()
@@ -206,7 +206,7 @@ func ExecuteCommand(ctx context.Context, params Params) Result {
 
 	// Exit code can assumed to be 0
 	log.CtxLogger(ctx).Debugw("Successfully executed command", "executable", params.Executable, "args", args,
-		"stdout", stdout.String(), "stderr", stderr.String(), "stdin", params.Stdin)
+		"stdout", stdout.String(), "stderr", stderr.String())
 	return Result{stdout.String(), stderr.String(), 0, nil, true, false}
 }
 
