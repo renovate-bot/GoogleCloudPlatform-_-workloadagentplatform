@@ -85,14 +85,6 @@ func CollectOSCommandMetric(ctx context.Context, m *cmpb.OSCommandMetric, exec c
 	return label, value
 }
 
-// CollectMetricsFromFile scans a configuration file and returns a map
-// of collected metric values, keyed by metric label.
-//
-// DEPRECATED: Use CollectEvalMetricsFromFile instead.
-func CollectMetricsFromFile(ctx context.Context, reader FileReader, path string, metrics []*cmpb.EvalMetric) map[string]string {
-	return collectMetricsFromFile(ctx, reader, path, metrics, false)
-}
-
 // CollectEvalMetricsFromFile performs metric collection on a file path and returns the results.
 //
 // Given a file path, scan through each line of the file and evaluate whether
